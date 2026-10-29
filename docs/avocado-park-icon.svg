@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- avocado-park: a cut avocado whose pit is a pause button (the session is stopped, not gone). -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf8ec"/><stop offset="1" stop-color="#dcebc6"/></linearGradient>
+    <linearGradient id="skin" x1="0.2" y1="0" x2="0.8" y2="1"><stop offset="0" stop-color="#55893a"/><stop offset="1" stop-color="#1d3a15"/></linearGradient>
+    <radialGradient id="flesh" cx="0.45" cy="0.6" r="0.65"><stop offset="0" stop-color="#f6f9cc"/><stop offset="0.55" stop-color="#d9ea8c"/><stop offset="1" stop-color="#99bf4c"/></radialGradient>
+    <radialGradient id="pit" cx="0.36" cy="0.3" r="0.8"><stop offset="0" stop-color="#b9824d"/><stop offset="0.55" stop-color="#7c4c26"/><stop offset="1" stop-color="#4a2c13"/></radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="2.6" stdDeviation="3.2" flood-color="#1d3a15" flood-opacity="0.3"/></filter>
+    <path id="avo" d="M50,4 C60,4 66,14 68,26 C70,38 78,46 84,58 C92,74 88,100 70,108 C60,112 40,112 30,108 C12,100 8,74 16,58 C22,46 30,38 32,26 C34,14 40,4 50,4 Z"/>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <g transform="translate(172 150) scale(6.8)">
+    <g filter="url(#shadow)">
+      <use href="#avo" fill="url(#skin)"/>
+      <use href="#avo" transform="translate(50 64) scale(0.84) translate(-50 -64)" fill="url(#flesh)"/>
+      <circle cx="50" cy="74" r="18" fill="url(#pit)"/>
+      <ellipse cx="43.5" cy="66.5" rx="6.5" ry="3.6" fill="#fff" opacity="0.2"/>
+      <rect x="42.5" y="65" width="5.4" height="18" rx="2.2" fill="#fbf8ec"/>
+      <rect x="52.1" y="65" width="5.4" height="18" rx="2.2" fill="#fbf8ec"/>
+    </g>
+  </g>
+</svg>

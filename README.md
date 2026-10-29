@@ -1,4 +1,6 @@
-# 🥑 avocado-park
+<p align="center"><img src="docs/avocado-park-icon.svg" width="128" alt="avocado-park icon: a cut avocado whose pit is a pause button"></p>
+
+<h1 align="center">avocado-park</h1>
 
 **Park idle Claude Code, Codex and OpenCode sessions to free memory, without closing their [herdr](https://herdr.dev) panes.**
 Resume them later in the same pane, with the full conversation. No session ids to copy, and no
