@@ -1,4 +1,4 @@
-// Package tui is the herdr-park panel: a live list of agent sessions where
+// Package tui is the avocado-park panel: a live list of agent sessions where
 // each one can be parked, unparked or jumped to.
 package tui
 
@@ -12,8 +12,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/andymartinezot/herdr-park/internal/park"
-	"github.com/andymartinezot/herdr-park/internal/sessions"
+	"github.com/andymartinezot/avocado-park/internal/park"
+	"github.com/andymartinezot/avocado-park/internal/sessions"
 )
 
 // Options configures the panel.
@@ -374,7 +374,7 @@ func (m model) View() string {
 	now := m.p.Now()
 
 	var b strings.Builder
-	b.WriteString(titleSt.Render("herdr-park") + dimSt.Render("  Claude Code, Codex and OpenCode sessions"))
+	b.WriteString(titleSt.Render("avocado-park") + dimSt.Render("  Claude Code, Codex and OpenCode sessions"))
 	if m.filtering || m.filter != "" {
 		cursor := ""
 		if m.filtering {

@@ -1,5 +1,5 @@
-id = "andymartinezot.herdr-park"
-name = "herdr-park"
+id = "andymartinezot.avocado-park"
+name = "avocado-park"
 version = "0.1.0"
 min_herdr_version = "0.9.3"
 description = "Park idle Claude Code, Codex and OpenCode sessions to free memory without closing their panes, then resume them in place."
@@ -13,11 +13,11 @@ command = ["sh", "scripts/fetch-or-build.sh"]
 # regardless of the working directory herdr gives the pane.
 [[panes]]
 id = "panel"
-title = "herdr-park"
+title = "avocado-park"
 placement = "popup"
 width = "70%"
 height = "60%"
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" panel"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" panel"]
 
 [[actions]]
 id = "open-panel"
@@ -31,45 +31,45 @@ id = "park"
 title = "Park: this session"
 description = "Exit the agent session in the focused pane and keep the pane, so it can be resumed later."
 contexts = ["pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" park"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" park"]
 
 [[actions]]
 id = "unpark"
 title = "Park: resume this session"
 description = "Resume the parked session of the focused pane."
 contexts = ["pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" unpark"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" unpark"]
 
 [[actions]]
 id = "park-tab"
 title = "Park: this tab"
 description = "Park every idle agent session in the focused tab; busy ones keep running."
 contexts = ["tab", "pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" park --tab"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" park --tab"]
 
 [[actions]]
 id = "unpark-tab"
 title = "Park: resume this tab"
 description = "Resume every parked session of the focused tab."
 contexts = ["tab", "pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" unpark --tab"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" unpark --tab"]
 
 [[actions]]
 id = "park-idle"
 title = "Park: all idle sessions"
 description = "Park every session idle for park_idle_days (default 3) or more, except the focused one."
 contexts = ["global", "workspace", "tab", "pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" park --idle"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" park --idle"]
 
 [[actions]]
 id = "unpark-all"
 title = "Park: resume all parked sessions"
 description = "Resume every parked session, each in its own pane (or a new tab if the pane was closed)."
 contexts = ["global", "workspace", "tab", "pane"]
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" unpark --all"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" unpark --all"]
 
 # On every pane focus: a toast when the pane holds a parked session, and
 # auto-park when auto_park_days is set (at most once an hour).
 [[events]]
 on = "pane.focused"
-command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/herdr-park\" hook"]
+command = ["sh", "-c", "exec \"$HERDR_PLUGIN_ROOT/bin/avocado-park\" hook"]

@@ -8,9 +8,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/sessions"
-	"github.com/andymartinezot/herdr-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/sessions"
+	"github.com/andymartinezot/avocado-park/internal/state"
 )
 
 // fake is an in-memory herdr. Sending /exit to an agent pane turns it into a

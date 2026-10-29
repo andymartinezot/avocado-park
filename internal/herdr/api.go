@@ -8,7 +8,7 @@ type AgentSession struct {
 	Value string `json:"value"`
 }
 
-// Pane is the subset of herdr's pane/agent info that herdr-park uses.
+// Pane is the subset of herdr's pane/agent info that avocado-park uses.
 // `agent list` and `pane list` share this shape; Agent is empty for plain shells.
 type Pane struct {
 	PaneID                string        `json:"pane_id"`

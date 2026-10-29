@@ -1,6 +1,7 @@
 package state
 
 import (
+	"os"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -46,5 +47,26 @@ func TestConcurrentPuts(t *testing.T) {
 	wg.Wait()
 	if e, _ := s.Load(); len(e) != 20 {
 		t.Fatalf("got %d entries, want 20 (lost updates)", len(e))
+	}
+}
+
+func TestMigrateOldStateDir(t *testing.T) {
+	base := t.TempDir()
+	old, dir := filepath.Join(base, "herdr-park"), filepath.Join(base, "avocado-park")
+	if err := os.MkdirAll(old, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(old, "parked.json"), []byte("[]\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	migrate(old, dir)
+	if _, err := os.Stat(filepath.Join(dir, "parked.json")); err != nil {
+		t.Fatalf("not moved: %v", err)
+	}
+	// Once the new directory exists, an old one is left alone.
+	_ = os.MkdirAll(old, 0o700)
+	migrate(old, dir)
+	if _, err := os.Stat(old); err != nil {
+		t.Errorf("second migrate touched the old dir: %v", err)
 	}
 }

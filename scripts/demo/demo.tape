@@ -1,7 +1,7 @@
-# Records docs/herdr-park-demo.gif with made-up sessions (scripts/demo).
+# Records docs/avocado-park-demo.gif with made-up sessions (scripts/demo).
 # Run from the repo root: vhs scripts/demo/demo.tape   (brew install vhs)
 
-Output docs/herdr-park-demo.gif
+Output docs/avocado-park-demo.gif
 
 Set Shell zsh
 Set FontSize 16
@@ -13,7 +13,7 @@ Set TypingSpeed 90ms
 Set CursorBlink false
 
 Hide
-Type "go build -o /tmp/herdr-park-demo ./scripts/demo && clear && /tmp/herdr-park-demo"
+Type "go build -o /tmp/avocado-park-demo ./scripts/demo && clear && /tmp/avocado-park-demo"
 Enter
 Sleep 3s
 Show
@@ -55,5 +55,5 @@ Type "q"
 Sleep 300ms
 
 Hide
-Type "rm -f /tmp/herdr-park-demo"
+Type "rm -f /tmp/avocado-park-demo"
 Enter

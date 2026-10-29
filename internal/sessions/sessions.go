@@ -1,4 +1,4 @@
-// Package sessions builds the list of agent sessions shown by herdr-park:
+// Package sessions builds the list of agent sessions shown by avocado-park:
 // live Claude Code and Codex agents from herdr, enriched with Claude's own
 // session files and memory use, plus the sessions parked earlier.
 package sessions
@@ -9,8 +9,8 @@ import (
 	"slices"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/state"
 )
 
 // AgentKind is the default herdr agent kind, also assumed for parked entries
@@ -25,7 +25,7 @@ type Agent struct {
 	Resume func(id string) []string
 }
 
-// Agents are the herdr agent kinds herdr-park manages.
+// Agents are the herdr agent kinds avocado-park manages.
 var Agents = map[string]Agent{
 	"claude": {Exit: "/exit", Resume: func(id string) []string { return []string{"--resume", id} }},
 	"codex":  {Exit: "/quit", Resume: func(id string) []string { return []string{"resume", id} }},

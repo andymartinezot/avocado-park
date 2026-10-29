@@ -1,15 +1,15 @@
 version: 2
 
 builds:
-  - main: ./cmd/herdr-park
-    binary: herdr-park
+  - main: ./cmd/avocado-park
+    binary: avocado-park
     env: [CGO_ENABLED=0]
     goos: [darwin, linux]
     goarch: [amd64, arm64]
     flags: [-trimpath]
     ldflags: ["-s -w -X main.version={{ .Version }}"]
 
-# Raw binaries named herdr-park_<os>_<arch>, which scripts/fetch-or-build.sh downloads.
+# Raw binaries named avocado-park_<os>_<arch>, which scripts/fetch-or-build.sh downloads.
 archives:
   - formats: [binary]
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"

@@ -1,4 +1,4 @@
-// Command demo runs the herdr-park panel against an in-memory herdr with
+// Command demo runs the avocado-park panel against an in-memory herdr with
 // made-up sessions, for recording the README demo (scripts/demo/demo.tape).
 // Nothing in it talks to a real herdr or touches real sessions.
 package main
@@ -13,10 +13,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/park"
-	"github.com/andymartinezot/herdr-park/internal/state"
-	"github.com/andymartinezot/herdr-park/internal/tui"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/park"
+	"github.com/andymartinezot/avocado-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/tui"
 )
 
 type session struct {
@@ -171,7 +171,7 @@ func writeSession(dir string, pid int, id, name string, at time.Time) {
 func main() {
 	print := flag.Bool("print", false, "print one frame and exit")
 	flag.Parse()
-	tmp, err := os.MkdirTemp("", "herdr-park-demo")
+	tmp, err := os.MkdirTemp("", "avocado-park-demo")
 	if err != nil {
 		panic(err)
 	}

@@ -1,4 +1,4 @@
-# ⏸️ herdr-park
+# 🥑 avocado-park
 
 **Park idle Claude Code, Codex and OpenCode sessions to free memory, without closing their [herdr](https://herdr.dev) panes.**
 Resume them later in the same pane, with the full conversation. No session ids to copy, and no
@@ -43,7 +43,7 @@ agent panes open, it adds up to a few GB.
 Closing idle panes frees it, but then you have to remember which folder, which workspace and which
 session id each one had. So most people leave everything running.
 
-herdr-park adds a third option:
+avocado-park adds a third option:
 
 ```text
 park   = exit the agent, keep the pane, remember the session
@@ -55,7 +55,7 @@ unpark = resume that session in the same pane
 ## Quick start
 
 ```sh
-herdr plugin install andymartinezot/herdr-park
+herdr plugin install andymartinezot/avocado-park
 herdr integration install claude     # so herdr knows each pane's session id
 herdr integration install codex      # optional, for Codex
 herdr integration install opencode   # optional, for OpenCode
@@ -77,15 +77,15 @@ this to `~/.config/herdr/config.toml`, using a key that is free in your setup:
 [[keys.command]]
 key = "prefix+shift+p"
 type = "plugin_action"
-command = "andymartinezot.herdr-park.open-panel"
-description = "herdr-park: sessions"
+command = "andymartinezot.avocado-park.open-panel"
+description = "avocado-park: sessions"
 ```
 
 ---
 
 ## Demo
 
-![The herdr-park panel: filtering, parking idle sessions and a tab, then resuming one](docs/herdr-park-demo.gif)
+![The avocado-park panel: filtering, parking idle sessions and a tab, then resuming one](docs/avocado-park-demo.gif)
 
 In the recording:
 
@@ -105,7 +105,7 @@ mistaken for a finished one.
 
 ```
 ╭───────────────────────────────────────────────────────────────────────────────╮
-│ herdr-park  Claude Code, Codex and OpenCode sessions                          │
+│ avocado-park  Claude Code, Codex and OpenCode sessions                        │
 │                                                                               │
 │   SESSION                 STATUS       IDLE    RAM  WORKSPACE                 │
 │ ▸ api-refactor            ● working       -   460M  backend                   │
@@ -149,7 +149,7 @@ mistaken for a finished one.
 ```mermaid
 sequenceDiagram
     participant U as You
-    participant P as herdr-park
+    participant P as avocado-park
     participant H as herdr
     participant A as Agent (claude / codex)
     U->>P: p (or P, or an action)
@@ -165,7 +165,7 @@ sequenceDiagram
 ```
 
 Only sessions that herdr reports as idle or done are parked. A session that is working, or waiting
-for your answer, is refused unless you force it. Right before sending `/exit`, herdr-park checks the
+for your answer, is refused unless you force it. Right before sending `/exit`, avocado-park checks the
 pane again. If you used the session in the meantime, it is skipped.
 
 ### Unparking
@@ -183,7 +183,7 @@ flowchart TD
     E --> F["claude --resume &lt;id&gt;<br/>(codex resume &lt;id&gt;)"]
 ```
 
-Claude Code looks up conversations by folder, so herdr-park changes back to the session's folder
+Claude Code looks up conversations by folder, so avocado-park changes back to the session's folder
 before resuming. It starts the agent through `herdr agent start`, so herdr tracks it again right away.
 
 ### Where the data comes from
@@ -219,15 +219,15 @@ When you focus a pane that holds a parked session, a toast names it and says how
 The same binary works from any terminal while herdr is running:
 
 ```sh
-herdr-park list [--json]              # live and parked sessions
-herdr-park park [--force] [TARGET]    # park one session
-herdr-park park --tab [TARGET]        # park every idle session in a tab
-herdr-park park --idle [--days N]     # park every session idle N+ days (default 3)
-herdr-park unpark [TARGET]            # resume one parked session
-herdr-park unpark --tab [TARGET]      # resume a tab's parked sessions
-herdr-park unpark --all               # resume every parked session
-herdr-park panel                      # the interactive panel
-herdr-park version
+avocado-park list [--json]              # live and parked sessions
+avocado-park park [--force] [TARGET]    # park one session
+avocado-park park --tab [TARGET]        # park every idle session in a tab
+avocado-park park --idle [--days N]     # park every session idle N+ days (default 3)
+avocado-park unpark [TARGET]            # resume one parked session
+avocado-park unpark --tab [TARGET]      # resume a tab's parked sessions
+avocado-park unpark --all               # resume every parked session
+avocado-park panel                      # the interactive panel
+avocado-park version
 ```
 
 `TARGET` is a pane id (`w3:p14`), a session name, or a session id (8+ characters). Inside herdr it
@@ -236,7 +236,7 @@ defaults to the focused pane. `list --json` is meant for scripts and other tools
 Add `--dry-run` to any `park` or `unpark` command to see what it would do, without changing anything:
 
 ```console
-$ herdr-park park --tab release-notes --dry-run
+$ avocado-park park --tab release-notes --dry-run
 would park release-notes (claude, idle, idle 48m, in pane w2:p3)
 would park changelog-bot (claude, idle, idle 2h, in pane w2:p4)
 ```
@@ -251,8 +251,8 @@ Codex sessions appear next to Claude Code ones. They park with `/quit` and resum
 `codex resume <id>`.
 
 herdr can't always tell when a Codex turn has ended, so it often reports Codex as `unknown` instead
-of idle. herdr-park doesn't park those on its own. Once you know a Codex session is done, park it with
-`F` in the panel or `herdr-park park --force <name>`.
+of idle. avocado-park doesn't park those on its own. Once you know a Codex session is done, park it with
+`F` in the panel or `avocado-park park --force <name>`.
 
 Codex keeps part of its memory in a shared background process, so parking a Codex session frees less
 than parking a Claude Code one.
@@ -267,12 +267,12 @@ and `P` doesn't pick them up. Park them with `p`, `T` or the CLI.
 
 ## Agent skill
 
-[`skills/herdr-park/SKILL.md`](skills/herdr-park/SKILL.md) teaches your coding agent to use the CLI,
+[`skills/avocado-park/SKILL.md`](skills/avocado-park/SKILL.md) teaches your coding agent to use the CLI,
 so you can ask it to "park my idle sessions" or "resume the infra tab". It dry-runs first, never
 parks its own session, and never forces a park without asking you.
 
 ```sh
-mkdir -p ~/.claude/skills && cp -R skills/herdr-park ~/.claude/skills/    # Claude Code
+mkdir -p ~/.claude/skills && cp -R skills/avocado-park ~/.claude/skills/    # Claude Code
 ```
 
 Other agents that read `SKILL.md` folders (Codex, OpenCode) use the same folder in their own skills
@@ -281,7 +281,7 @@ directory.
 
 ## Configure
 
-`~/.config/herdr/plugins/config/andymartinezot.herdr-park/config.toml`. Every setting is optional:
+`~/.config/herdr/plugins/config/andymartinezot.avocado-park/config.toml`. Every setting is optional:
 
 ```toml
 park_idle_days = 3     # threshold for P, the purple marker and park --idle
@@ -298,7 +298,7 @@ what was parked.
 
 ## Safety
 
-Parking stops a process, so herdr-park is careful about what it parks and where it types.
+Parking stops a process, so avocado-park is careful about what it parks and where it types.
 
 - **Refuses busy sessions:** a session that is working or waiting on you is only parked with
   `F` / `--force`, and the panel asks first.
@@ -319,11 +319,11 @@ Parking stops a process, so herdr-park is careful about what it parks and where 
 
 ## State and privacy
 
-Parked sessions live in `~/.local/state/herdr-park/parked.json` (or `$XDG_STATE_HOME/herdr-park`),
+Parked sessions live in `~/.local/state/avocado-park/parked.json` (or `$XDG_STATE_HOME/avocado-park`),
 created readable only by you (`0600` file, `0700` folder). It holds session names, folders, pane ids
 and session ids. Don't commit or share it.
 
-herdr-park makes no network calls. It only talks to herdr's local socket.
+avocado-park makes no network calls. It only talks to herdr's local socket.
 
 ---
 
@@ -344,11 +344,11 @@ herdr-park makes no network calls. It only talks to herdr's local socket.
 
 ```sh
 go test -race ./...
-go build -o bin/herdr-park ./cmd/herdr-park
+go build -o bin/avocado-park ./cmd/avocado-park
 herdr plugin link "$PWD"                 # link does not run the build step; run it again after adding event hooks
-bin/herdr-park panel --print --width 84  # render one frame without a popup
+bin/avocado-park panel --print --width 84  # render one frame without a popup
 go run ./scripts/demo                    # the panel with made-up sessions, no herdr needed
-vhs scripts/demo/demo.tape               # re-record docs/herdr-park-demo.gif (brew install vhs)
+vhs scripts/demo/demo.tape               # re-record docs/avocado-park-demo.gif (brew install vhs)
 ```
 
 Releases are cut by pushing a `vX.Y.Z` tag that matches `version` in `herdr-plugin.toml`. GoReleaser

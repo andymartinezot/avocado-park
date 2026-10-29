@@ -36,20 +36,32 @@ type Entry struct {
 // Store is the parked-session file.
 type Store struct{ Path string }
 
-// DefaultPath is $HERDR_PARK_STATE_DIR, else $XDG_STATE_HOME/herdr-park, else
-// ~/.local/state/herdr-park. It deliberately ignores HERDR_PLUGIN_STATE_DIR so
+// DefaultPath is $AVOCADO_PARK_STATE_DIR, else $XDG_STATE_HOME/avocado-park, else
+// ~/.local/state/avocado-park. It deliberately ignores HERDR_PLUGIN_STATE_DIR so
 // that the plugin and the standalone CLI always share one file.
 func DefaultPath() string {
-	dir := os.Getenv("HERDR_PARK_STATE_DIR")
+	dir := os.Getenv("AVOCADO_PARK_STATE_DIR")
 	if dir == "" {
 		base := os.Getenv("XDG_STATE_HOME")
 		if base == "" {
 			home, _ := os.UserHomeDir()
 			base = filepath.Join(home, ".local", "state")
 		}
-		dir = filepath.Join(base, "herdr-park")
+		dir = filepath.Join(base, "avocado-park")
+		migrate(filepath.Join(base, "herdr-park"), dir)
 	}
 	return filepath.Join(dir, "parked.json")
+}
+
+// migrate moves the state directory of releases named herdr-park to its
+// new name, once: only when the new directory doesn't exist yet.
+func migrate(old, dir string) {
+	if _, err := os.Lstat(dir); !os.IsNotExist(err) {
+		return
+	}
+	if fi, err := os.Lstat(old); err == nil && fi.IsDir() {
+		_ = os.Rename(old, dir)
+	}
 }
 
 // Load reads every entry. A missing file is an empty list.

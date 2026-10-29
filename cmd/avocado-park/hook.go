@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/config"
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/park"
-	"github.com/andymartinezot/herdr-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/config"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/park"
+	"github.com/andymartinezot/avocado-park/internal/state"
 )
 
 // autoParkEvery limits how often a hook may run auto-park.
@@ -79,7 +79,7 @@ func remindParked(c *herdr.Client, store state.Store, pane string) {
 			return // closed, or something runs there again
 		}
 		_ = c.Notify(e.Name+" is parked",
-			"Resume it here with u in the herdr-park panel, or the \"Park: resume this session\" action.")
+			"Resume it here with u in the avocado-park panel, or the \"Park: resume this session\" action.")
 		return
 	}
 }

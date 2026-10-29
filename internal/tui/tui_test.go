@@ -5,7 +5,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
-	"github.com/andymartinezot/herdr-park/internal/sessions"
+	"github.com/andymartinezot/avocado-park/internal/sessions"
 )
 
 func rows(names ...string) []sessions.Row {

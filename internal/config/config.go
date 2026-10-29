@@ -1,4 +1,4 @@
-// Package config reads herdr-park's optional config.toml.
+// Package config reads avocado-park's optional config.toml.
 package config
 
 import (
@@ -10,7 +10,7 @@ import (
 )
 
 // PluginID is the herdr plugin id, also used for the config directory name.
-const PluginID = "andymartinezot.herdr-park"
+const PluginID = "andymartinezot.avocado-park"
 
 // Config holds user settings. Every field has a usable default.
 type Config struct {

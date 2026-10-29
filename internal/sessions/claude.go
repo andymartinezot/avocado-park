@@ -8,7 +8,7 @@ import (
 )
 
 // ClaudeSession is the part of Claude Code's ~/.claude/sessions/<pid>.json
-// that herdr-park reads. The format is internal to Claude Code, so every field
+// that avocado-park reads. The format is internal to Claude Code, so every field
 // is optional and the data only enriches what herdr reports.
 type ClaudeSession struct {
 	PID         int    `json:"pid"`

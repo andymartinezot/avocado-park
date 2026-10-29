@@ -14,9 +14,9 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/sessions"
-	"github.com/andymartinezot/herdr-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/sessions"
+	"github.com/andymartinezot/avocado-park/internal/state"
 )
 
 // Herdr is the part of the herdr API that parking needs.
@@ -261,7 +261,7 @@ func CanPark(row sessions.Row, opt ParkOptions) error {
 		return fmt.Errorf("%s runs in a folder name with control characters; not parking it", row.Name)
 	}
 	if _, ok := sessions.Agents[cmp.Or(row.Kind, sessions.AgentKind)]; !ok {
-		return fmt.Errorf("%s: herdr-park can't park %s agents", row.Name, row.Kind)
+		return fmt.Errorf("%s: avocado-park can't park %s agents", row.Name, row.Kind)
 	}
 	return nil
 }
@@ -279,7 +279,7 @@ func CanUnpark(row sessions.Row) error {
 		return fmt.Errorf("%s has a folder name with control characters; resume it by hand", row.Name)
 	}
 	if _, ok := sessions.Agents[cmp.Or(row.Kind, sessions.AgentKind)]; !ok {
-		return fmt.Errorf("%s: herdr-park can't resume %s agents", row.Name, row.Kind)
+		return fmt.Errorf("%s: avocado-park can't resume %s agents", row.Name, row.Kind)
 	}
 	return nil
 }
@@ -456,9 +456,9 @@ func safeCwd(dir string) bool {
 		!strings.ContainsFunc(dir, func(r rune) bool { return r < 0x20 || (r >= 0x7f && r <= 0x9f) })
 }
 
-// shells are the foreground programs a pane may run for herdr-park to type
+// shells are the foreground programs a pane may run for avocado-park to type
 // into it. true marks POSIX shells, where shellQuote's quoting holds; in the
-// others (fish, nu, csh, …) herdr-park types nothing but the agent start.
+// others (fish, nu, csh, …) avocado-park types nothing but the agent start.
 var shells = map[string]bool{"sh": true, "bash": true, "zsh": true, "dash": true, "ksh": true,
 	"fish": false, "tcsh": false, "csh": false, "nu": false, "elvish": false, "xonsh": false}
 

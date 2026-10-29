@@ -71,7 +71,7 @@ func (c *Client) CallTimeout(method string, params, out any, timeout time.Durati
 	if params == nil {
 		params = struct{}{}
 	}
-	req, err := json.Marshal(map[string]any{"id": "herdr-park:" + method, "method": method, "params": params})
+	req, err := json.Marshal(map[string]any{"id": "avocado-park:" + method, "method": method, "params": params})
 	if err != nil {
 		return err
 	}

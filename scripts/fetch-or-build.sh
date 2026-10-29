@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install the herdr-park binary into bin/.
+# Install the avocado-park binary into bin/.
 #
 # Downloads the release matching this checkout's manifest version and checks
 # it against the release's SHA256SUMS. If that is not possible (unsupported
@@ -7,9 +7,9 @@
 # with Go instead.
 set -u
 
-repo="andymartinezot/herdr-park"
+repo="andymartinezot/avocado-park"
 root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-out="$root/bin/herdr-park"
+out="$root/bin/avocado-park"
 base_url="https://github.com/$repo/releases/download"
 
 cleanup() { [ -n "${tmpdir:-}" ] && rm -rf "$tmpdir"; }
@@ -18,16 +18,16 @@ trap cleanup EXIT
 build_from_source() {
   cleanup
   if ! command -v go >/dev/null 2>&1; then
-    echo "herdr-park: no matching prebuilt binary and Go is not installed (https://go.dev/dl)." >&2
+    echo "avocado-park: no matching prebuilt binary and Go is not installed (https://go.dev/dl)." >&2
     exit 1
   fi
   mkdir -p "$root/bin" || exit 1
   cd "$root" || exit 1
-  exec go build -trimpath -ldflags "-s -w -X main.version=${version:-dev}" -o "$out" ./cmd/herdr-park
+  exec go build -trimpath -ldflags "-s -w -X main.version=${version:-dev}" -o "$out" ./cmd/avocado-park
 }
 
 fallback() {
-  echo "herdr-park: $1; building from source instead." >&2
+  echo "avocado-park: $1; building from source instead." >&2
   build_from_source
 }
 
@@ -62,7 +62,7 @@ case "$(uname -s)/$(uname -m)" in
   *) fallback "no prebuilt binary for $(uname -s)/$(uname -m)" ;;
 esac
 
-asset="herdr-park_${target}"
+asset="avocado-park_${target}"
 tmpdir=$(mktemp -d 2>/dev/null) || fallback "could not create a temporary directory"
 download SHA256SUMS "$tmpdir/SHA256SUMS" || fallback "no release v$version"
 download "$asset" "$tmpdir/$asset" || fallback "no $asset in release v$version"
@@ -74,4 +74,4 @@ actual=$(sha256_of "$tmpdir/$asset") || fallback "no SHA-256 tool available"
 
 mkdir -p "$root/bin" && chmod +x "$tmpdir/$asset" && mv -f "$tmpdir/$asset" "$out" ||
   fallback "could not install the downloaded binary"
-echo "herdr-park: installed verified v$version ($target)."
+echo "avocado-park: installed verified v$version ($target)."

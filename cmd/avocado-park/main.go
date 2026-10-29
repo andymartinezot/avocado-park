@@ -1,4 +1,4 @@
-// Command herdr-park lists Claude Code, Codex and OpenCode sessions running in herdr and parks
+// Command avocado-park lists Claude Code, Codex and OpenCode sessions running in herdr and parks
 // (exits, keeping the pane) or unparks (resumes in place) them.
 package main
 
@@ -11,28 +11,28 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/config"
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/park"
-	"github.com/andymartinezot/herdr-park/internal/sessions"
-	"github.com/andymartinezot/herdr-park/internal/state"
-	"github.com/andymartinezot/herdr-park/internal/tui"
+	"github.com/andymartinezot/avocado-park/internal/config"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/park"
+	"github.com/andymartinezot/avocado-park/internal/sessions"
+	"github.com/andymartinezot/avocado-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/tui"
 )
 
 var version = "dev"
 
-const usage = `herdr-park: park and resume Claude Code, Codex and OpenCode sessions without closing their herdr panes
+const usage = `avocado-park: park and resume Claude Code, Codex and OpenCode sessions without closing their herdr panes
 
 Usage:
-  herdr-park list [--json]              list live and parked sessions
-  herdr-park park [--force] [TARGET]    exit the agent, keep the pane, remember the session
-  herdr-park park --tab [TARGET]        park every idle session in a tab
-  herdr-park park --idle [--days N]     park every session idle for N+ days (default park_idle_days)
-  herdr-park unpark [TARGET]            resume a parked session in its pane
-  herdr-park unpark --tab [TARGET]      resume every parked session of a tab
-  herdr-park unpark --all               resume every parked session
-  herdr-park panel                      interactive list (what the herdr popup runs)
-  herdr-park version
+  avocado-park list [--json]              list live and parked sessions
+  avocado-park park [--force] [TARGET]    exit the agent, keep the pane, remember the session
+  avocado-park park --tab [TARGET]        park every idle session in a tab
+  avocado-park park --idle [--days N]     park every session idle for N+ days (default park_idle_days)
+  avocado-park unpark [TARGET]            resume a parked session in its pane
+  avocado-park unpark --tab [TARGET]      resume every parked session of a tab
+  avocado-park unpark --all               resume every parked session
+  avocado-park panel                      interactive list (what the herdr popup runs)
+  avocado-park version
 
 TARGET is a pane id (w3:p14), a session name, or a session id (8+ chars).
 Inside herdr it defaults to the focused pane. Add --dry-run to park or unpark
@@ -41,7 +41,7 @@ to print what would happen without changing anything.
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "herdr-park:", sessions.Printable(err.Error()))
+		fmt.Fprintln(os.Stderr, "avocado-park:", sessions.Printable(err.Error()))
 		os.Exit(1)
 	}
 }
@@ -107,15 +107,15 @@ func run(args []string) error {
 		fs.Visit(func(f *flag.Flag) { set[f.Name] = true })
 		switch {
 		case cmd == "unpark" && (set["force"] || set["idle"] || set["days"]):
-			return fmt.Errorf("usage: herdr-park unpark [--dry-run] [--all | --tab [TARGET] | TARGET]")
+			return fmt.Errorf("usage: avocado-park unpark [--dry-run] [--all | --tab [TARGET] | TARGET]")
 		case cmd == "park" && set["all"]:
-			return fmt.Errorf("usage: herdr-park park [--force] [--tab] [TARGET] | park --idle [--days N]")
+			return fmt.Errorf("usage: avocado-park park [--force] [--tab] [TARGET] | park --idle [--days N]")
 		case *idle && (len(pos) > 0 || *force || *tab || *days < 1):
-			return fmt.Errorf("usage: herdr-park park --idle [--days N]  (N ≥ 1)")
+			return fmt.Errorf("usage: avocado-park park --idle [--days N]  (N ≥ 1)")
 		case set["days"] && !*idle:
 			return fmt.Errorf("--days only applies with --idle")
 		case *all && (len(pos) > 0 || *tab):
-			return fmt.Errorf("usage: herdr-park unpark --all")
+			return fmt.Errorf("usage: avocado-park unpark --all")
 		case *tab && *force:
 			return fmt.Errorf("--force parks one session at a time; leave out --tab")
 		case len(pos) > 1:
@@ -222,7 +222,7 @@ func parseArgs(fs *flag.FlagSet, args []string) ([]string, error) {
 	}
 }
 
-// focusedPane is the pane the user was in when invoking herdr-park: the
+// focusedPane is the pane the user was in when invoking avocado-park: the
 // plugin context's focused pane (inside a plugin pane, HERDR_PANE_ID is the
 // plugin's own pane), else the calling pane.
 func focusedPane() string {
@@ -329,7 +329,7 @@ func describe(r sessions.Row, now time.Time) string {
 
 func report(c *herdr.Client, notify bool, title, body string, err error) {
 	if err != nil {
-		title, body = "herdr-park", err.Error()
+		title, body = "avocado-park", err.Error()
 	} else {
 		fmt.Println(sessions.Printable(title), sessions.Printable(body))
 	}

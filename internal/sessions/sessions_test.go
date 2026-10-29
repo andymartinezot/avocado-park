@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andymartinezot/herdr-park/internal/herdr"
-	"github.com/andymartinezot/herdr-park/internal/state"
+	"github.com/andymartinezot/avocado-park/internal/herdr"
+	"github.com/andymartinezot/avocado-park/internal/state"
 )
 
 type fakeHerdr struct {

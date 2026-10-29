@@ -1,4 +1,4 @@
-module github.com/andymartinezot/herdr-park
+module github.com/andymartinezot/avocado-park
 
 go 1.24.0
 
