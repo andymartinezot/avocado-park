@@ -1,0 +1,22 @@
+version: 2
+
+builds:
+  - main: ./cmd/herdr-park
+    binary: herdr-park
+    env: [CGO_ENABLED=0]
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags: ["-s -w -X main.version={{ .Version }}"]
+
+# Raw binaries named herdr-park_<os>_<arch>, which scripts/fetch-or-build.sh downloads.
+archives:
+  - formats: [binary]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+
+changelog:
+  use: github
