@@ -1,2 +1,18 @@
 /bin/
 /dist/
+
+# macOS
+.DS_Store
+
+# AI assistant config and notes: kept local, never published
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.codex/
+.cursor/
+.cursorrules
+.windsurf/
+.aider*
+.github/copilot-instructions.md
