@@ -20,8 +20,8 @@ guessing which pane held which work.
 ## Contents
 
 - [Why](#why)
-- [Quick start](#quick-start)
 - [Demo](#demo)
+- [Quick start](#quick-start)
 - [The panel](#the-panel)
 - [How it works](#how-it-works)
 - [herdr actions](#herdr-actions)
@@ -54,6 +54,24 @@ unpark = resume that session in the same pane
 
 ---
 
+## Demo
+
+![The avocado-park panel: filtering, parking idle sessions and a tab, then resuming one](docs/avocado-park-demo.gif)
+
+In the recording:
+
+1. `/` filters the list by workspace.
+2. `P` parks every session idle for 3 days or more. Each one's RAM cell shows the memory it freed,
+   in brackets, and the footer adds up the total.
+3. `T` parks every idle session in the selected session's tab.
+4. `u` resumes a parked session in its pane, with the full conversation.
+
+The sessions are made up (`scripts/demo`), so the recording never touches real ones. Outside the
+panel, focusing a parked pane shows a toast naming the session, so the plain shell there isn't
+mistaken for a finished one.
+
+---
+
 ## Quick start
 
 ```sh
@@ -83,23 +101,8 @@ command = "andymartinezot.avocado-park.open-panel"
 description = "avocado-park: sessions"
 ```
 
----
-
-## Demo
-
-![The avocado-park panel: filtering, parking idle sessions and a tab, then resuming one](docs/avocado-park-demo.gif)
-
-In the recording:
-
-1. `/` filters the list by workspace.
-2. `P` parks every session idle for 3 days or more. Each one's RAM cell shows the memory it freed,
-   in brackets, and the footer adds up the total.
-3. `T` parks every idle session in the selected session's tab.
-4. `u` resumes a parked session in its pane, with the full conversation.
-
-The sessions are made up (`scripts/demo`), so the recording never touches real ones. Outside the
-panel, focusing a parked pane shows a toast naming the session, so the plain shell there isn't
-mistaken for a finished one.
+herdr reads `config.toml` only when it starts, so run `herdr server reload-config` after adding
+the key. Until you do, the key does nothing.
 
 ---
 
