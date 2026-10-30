@@ -2,6 +2,11 @@
 
 <h1 align="center">avocado-park</h1>
 
+<p align="center">
+  <a href="https://github.com/andymartinezot/avocado-park/releases/latest"><img src="https://img.shields.io/github/v/release/andymartinezot/avocado-park" alt="Latest release"></a>
+  <a href="https://github.com/andymartinezot/avocado-park"><img src="https://img.shields.io/github/stars/andymartinezot/avocado-park?style=social" alt="GitHub stars"></a>
+</p>
+
 **Park idle Claude Code, Codex and OpenCode sessions to free memory, without closing their [herdr](https://herdr.dev) panes.**
 Resume them later in the same pane, with the full conversation. No session ids to copy, and no
 guessing which pane held which work.
