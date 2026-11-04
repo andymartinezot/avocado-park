@@ -28,6 +28,7 @@ type Herdr interface {
 	StartAgent(name, kind, pane string, args []string, timeout time.Duration) error
 	CreateTab(workspace, cwd, label string) (string, error)
 	FocusPane(pane string) error
+	ClosePane(pane string) error
 }
 
 // Parker parks and unparks sessions.
@@ -280,6 +281,110 @@ func CanUnpark(row sessions.Row) error {
 	}
 	if _, ok := sessions.Agents[cmp.Or(row.Kind, sessions.AgentKind)]; !ok {
 		return fmt.Errorf("%s: avocado-park can't resume %s agents", row.Name, row.Kind)
+	}
+	return nil
+}
+
+// CanClose reports why row can't be closed, or nil. Close checks the pane
+// again before acting; this is the part that needs no herdr call.
+func CanClose(row sessions.Row) error {
+	switch {
+	case row.Pending:
+		return fmt.Errorf("%s is still exiting; try again in a moment", row.Name)
+	case row.Parked():
+		return nil
+	case row.Status == sessions.StatusBlocked:
+		return fmt.Errorf("%s is waiting on a question or approval; answer it first", row.Name)
+	case row.Status == sessions.StatusWorking:
+		return fmt.Errorf("%s is working; close it once it is idle", row.Name)
+	}
+	if _, ok := sessions.Agents[cmp.Or(row.Kind, sessions.AgentKind)]; !ok {
+		return fmt.Errorf("%s: avocado-park can't close %s agents", row.Name, row.Kind)
+	}
+	return nil
+}
+
+// Close ends a session for good: it exits the agent if one runs, closes the
+// pane and forgets the session. Nothing is kept to resume it from, though the
+// agent's own conversation history stays on disk.
+func (p *Parker) Close(row sessions.Row) error {
+	if err := CanClose(row); err != nil {
+		return err
+	}
+	unlock, err := p.Store.Lock()
+	if err != nil {
+		return fmt.Errorf("lock: %w", err)
+	}
+	defer unlock()
+
+	if row.Parked() {
+		if row.PaneExists {
+			if err := p.closeShell(row); err != nil {
+				return err
+			}
+		}
+		return p.Store.Remove(row.SessionID)
+	}
+
+	// The row may be seconds old: check the pane again before exiting the
+	// agent, as Park does.
+	kind := cmp.Or(row.Kind, sessions.AgentKind)
+	pane, err := p.H.Pane(row.PaneID)
+	if err != nil {
+		return fmt.Errorf("check %s: %w", row.Name, err)
+	}
+	switch {
+	case pane.Agent != kind:
+		return fmt.Errorf("%s: pane %s no longer runs %s", row.Name, row.PaneID, kind)
+	case pane.SessionID() != row.AgentRef:
+		return fmt.Errorf("%s: pane %s now runs a different session; refresh and try again", row.Name, row.PaneID)
+	case pane.AgentStatus == sessions.StatusBlocked:
+		return fmt.Errorf("%s is waiting on a question or approval; answer it first", row.Name)
+	case pane.AgentStatus == sessions.StatusWorking:
+		return fmt.Errorf("%s is working; close it once it is idle", row.Name)
+	}
+	if err := p.H.Prompt(row.PaneID, sessions.Agents[kind].Exit); err != nil {
+		return fmt.Errorf("send %s to %s: %w", sessions.Agents[kind].Exit, row.Name, err)
+	}
+	if err := p.waitExited(row); err != nil {
+		return fmt.Errorf("asked %s to exit but it is still running after %s; its pane stays open", row.Name, p.ExitTimeout)
+	}
+	if err := p.closeShell(row); err != nil {
+		return err
+	}
+	if row.SessionID == "" {
+		return nil
+	}
+	return p.Store.Remove(row.SessionID)
+}
+
+// closeShell closes row's pane, which must be at a shell prompt: another
+// program running there is work this session doesn't own. A pane that is
+// already gone counts as closed.
+func (p *Parker) closeShell(row sessions.Row) error {
+	info, err := p.H.Pane(row.PaneID)
+	if herdr.IsCode(err, "pane_not_found") {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("check pane %s: %w", row.PaneID, err)
+	}
+	if info.Agent != "" {
+		return fmt.Errorf("pane %s now runs %s; leaving it open", row.PaneID, info.Agent)
+	}
+	// After a herdr restart the id can name a pane elsewhere.
+	if row.WorkspaceID != "" && info.WorkspaceID != row.WorkspaceID {
+		return fmt.Errorf("pane %s is now in another workspace; leaving it open", row.PaneID)
+	}
+	busy, _, known := p.foreground(row.PaneID)
+	switch {
+	case busy != "":
+		return fmt.Errorf("pane %s is running %s; leaving it open", row.PaneID, busy)
+	case !known:
+		return fmt.Errorf("can't tell what pane %s is running; leaving it open", row.PaneID)
+	}
+	if err := p.H.ClosePane(row.PaneID); err != nil && !herdr.IsCode(err, "pane_not_found") {
+		return fmt.Errorf("close pane %s: %w", row.PaneID, err)
 	}
 	return nil
 }

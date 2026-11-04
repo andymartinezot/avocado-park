@@ -128,7 +128,7 @@ the key. Until you do, the key does nothing.
 │                                                                               │
 │ 5 live · 1.3G   2 parked · 512M freed                                         │
 │                                                                               │
-│ p park  u unpark  ⏎ go to pane  P park idle ≥3d  T park tab  U unpark all  …  │
+│ p park  u unpark  x close  ⏎ go to pane  P park idle ≥3d  T park tab  …       │
 ╰───────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -136,6 +136,7 @@ the key. Until you do, the key does nothing.
 |---|---|
 | `p` | Park the selected session |
 | `u` | Resume the selected parked session |
+| `x` | Close the selected session: exit the agent, close its pane, remove it from the list (asks first) |
 | `⏎` | Jump to the session's pane |
 | `P` | Park every session idle for 3+ days (asks first) |
 | `T` | Park every idle session in the selected session's tab (asks first) |
@@ -145,10 +146,31 @@ the key. Until you do, the key does nothing.
 | `r` / `q` | Refresh / quit |
 
 - An idle time in **purple** marks a session idle for 3 days or more. Those are the ones `P` parks.
-- `•` marks the pane you opened the panel from. You can't park it from the panel, so you won't exit
-  the session you're typing in.
-- The panel fills the popup and refreshes every 3 seconds. The cursor stays on the same session
-  when rows move.
+- `•` marks the pane you opened the panel from. You can't park or close it from the panel, so you
+  won't exit the session you're typing in.
+- `parked*` marks a parked session whose pane is gone: it was closed, or now runs another agent.
+  `u` resumes it in a new tab, and `x` removes it from the list. The footer repeats this whenever
+  such a session is listed.
+- The panel fills the popup and refreshes every 3 seconds, or every second while an action runs, so
+  a batch shows each session parking as it happens. The cursor stays on the same session when rows
+  move.
+
+### Closing a session
+
+Parking keeps a session for later. Closing is for one you're done with: `x` exits the agent, closes
+the pane and removes the session from the list. The panel asks first, and nothing is kept to resume
+it from here. The agent's own conversation history stays on disk, so `claude --resume <id>` still
+finds it.
+
+| The session is | `x` does |
+|---|---|
+| Live and idle, or `unknown` | Exits the agent, then closes the pane |
+| Parked | Closes the pane, which is at a shell prompt |
+| `parked*` | Removes it from the list; there's no pane to close |
+| Working or waiting on you | Refuses. Let it finish, or answer it first |
+
+Closing a tab's last pane closes the tab too. A pane another plugin added, such as a sidebar, stays
+open, and so does its tab.
 
 ---
 
@@ -236,14 +258,17 @@ avocado-park park --idle [--days N]     # park every session idle N+ days (defau
 avocado-park unpark [TARGET]            # resume one parked session
 avocado-park unpark --tab [TARGET]      # resume a tab's parked sessions
 avocado-park unpark --all               # resume every parked session
+avocado-park close TARGET               # exit the agent, close its pane, forget the session
 avocado-park panel                      # the interactive panel
 avocado-park version
 ```
 
 `TARGET` is a pane id (`w3:p14`), a session name, or a session id (8+ characters). Inside herdr it
-defaults to the focused pane. `list --json` is meant for scripts and other tools.
+defaults to the focused pane, except for `close`, which always needs one and refuses the pane it
+runs in. `list --json` is meant for scripts and other tools.
 
-Add `--dry-run` to any `park` or `unpark` command to see what it would do, without changing anything:
+Add `--dry-run` to any `park`, `unpark` or `close` command to see what it would do, without changing
+anything:
 
 ```console
 $ avocado-park park --tab release-notes --dry-run
@@ -319,6 +344,8 @@ Parking stops a process, so avocado-park is careful about what it parks and wher
 - **Never resumes twice:** if a parked session is already running somewhere, unpark refuses.
 - **Only types into a shell:** unpark won't type into a pane running another program, such as vim.
   If the pane is gone, it opens a new tab.
+- **Only closes a shell:** close leaves a pane open if it runs another program, now holds another
+  agent, or moved to another workspace. If the agent doesn't exit, the pane stays open too.
 - **Validates what it types:** session ids must be plain ids, and folders containing control
   characters are refused, so nothing unexpected reaches the shell. It only types `cd` into POSIX
   shells (sh, bash, zsh, dash, ksh); in fish, nu or csh it opens a new tab in the folder instead.
@@ -347,6 +374,7 @@ avocado-park makes no network calls. It only talks to herdr's local socket.
 | Listed as parked (pending) | The agent didn't exit within 20 s. Check the pane, then park it again |
 | "pane … is running vim" on unpark | Quit that program so the pane is back at the shell prompt, then unpark again |
 | Unpark opened a new tab | The original pane was closed (or, after a herdr restart, its id now belongs to another workspace) |
+| A tab stays open after closing its session | Another plugin's pane, such as a sidebar, is still in it. Close the tab in herdr |
 
 ---
 

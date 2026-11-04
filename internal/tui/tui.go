@@ -4,6 +4,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -82,7 +83,18 @@ func (m model) load() tea.Cmd {
 }
 
 func (m model) tick() tea.Cmd {
-	return tea.Tick(m.opt.Refresh, func(time.Time) tea.Msg { return tickMsg{} })
+	return tea.Tick(m.tickEvery(), func(time.Time) tea.Msg { return tickMsg{} })
+}
+
+// busyRefresh is the longest wait between refreshes while an action runs, so
+// a batch shows each session changing instead of only the end result.
+const busyRefresh = time.Second
+
+func (m model) tickEvery() time.Duration {
+	if m.busy != "" {
+		return min(m.opt.Refresh, busyRefresh)
+	}
+	return m.opt.Refresh
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -90,10 +102,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
 	case tickMsg:
-		if m.busy == "" {
-			return m, tea.Batch(m.load(), m.tick())
-		}
-		return m, m.tick()
+		return m, tea.Batch(m.load(), m.tick())
 	case rowsMsg:
 		m.loaded = true
 		if msg.err != nil {
@@ -163,6 +172,7 @@ const (
 	actParkTab   = "park-tab"
 	actUnparkAll = "unpark-all"
 	actForce     = "force"
+	actClose     = "close"
 )
 
 func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
@@ -180,6 +190,12 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.busy = "parking " + row.Name + "…"
 				return m, m.run(func() (string, error) {
 					return "parked " + row.Name, m.p.Park(row, park.ParkOptions{Force: true})
+				}, false)
+			case actClose:
+				row := batch[0]
+				m.busy = "closing " + row.Name + "…"
+				return m, m.run(func() (string, error) {
+					return "closed " + row.Name, m.p.Close(row)
 				}, false)
 			}
 			m.busy = fmt.Sprintf("parking %d sessions…", len(batch))
@@ -257,6 +273,16 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			pane, err := m.p.Unpark(row)
 			return fmt.Sprintf("resumed %s in %s", row.Name, pane), err
 		}, false)
+	case "x":
+		if row.PaneID == m.opt.Self && !row.Parked() {
+			m.setMsg("that's the pane you opened this panel from; close it from another pane", true)
+			return m, nil
+		}
+		if err := park.CanClose(row); err != nil {
+			m.setMsg(err.Error(), true)
+			return m, nil
+		}
+		m.confirm, m.action = []sessions.Row{row}, actClose
 	case "enter":
 		if row.Parked() && !row.PaneExists {
 			m.setMsg("its pane was closed; press u to resume it in a new tab", true)
@@ -456,7 +482,10 @@ func (m model) View() string {
 	if freed > 0 {
 		summary += " · " + sessions.FormatBytes(freed) + " freed"
 	}
-	b.WriteString(dimSt.Render(summary) + "\n")
+	if slices.ContainsFunc(m.rows, paneGone) {
+		summary += "   * pane gone: u resumes in a new tab"
+	}
+	b.WriteString(dimSt.Render(ansi.Truncate(summary, inner, "…")) + "\n")
 	switch {
 	case m.confirm != nil:
 		names := make([]string, len(m.confirm))
@@ -471,9 +500,13 @@ func (m model) View() string {
 			q = fmt.Sprintf("Resume %d parked sessions? ", len(m.confirm))
 		case actForce:
 			q = fmt.Sprintf("Force-park %s (%s)? Any reply in progress is lost. ", sessions.Printable(m.confirm[0].Name), m.confirm[0].Status)
+		case actClose:
+			b.WriteString(keySt.Render(ansi.Truncate(closeQuestion(m.confirm[0]), inner-5, "…")+"  y/n") + "\n")
 		}
-		b.WriteString(keySt.Render(q) +
-			ansi.Truncate(strings.Join(names, ", "), inner-30, "…") + keySt.Render("  y/n") + "\n")
+		if m.action != actClose {
+			b.WriteString(keySt.Render(q) +
+				ansi.Truncate(strings.Join(names, ", "), inner-30, "…") + keySt.Render("  y/n") + "\n")
+		}
 	case m.busy != "":
 		b.WriteString(dimSt.Render(sessions.Printable(m.busy)) + "\n")
 	case m.msg != "":
@@ -485,7 +518,7 @@ func (m model) View() string {
 	default:
 		b.WriteString("\n")
 	}
-	help := []string{"p park", "u unpark", "⏎ go to pane", fmt.Sprintf("P park idle ≥%dd", m.opt.IdleDays), "T park tab", "U unpark all", "/ filter", "r refresh", "q quit"}
+	help := []string{"p park", "u unpark", "x close", "⏎ go to pane", fmt.Sprintf("P park idle ≥%dd", m.opt.IdleDays), "T park tab", "U unpark all", "/ filter", "r refresh", "q quit"}
 	if m.filtering {
 		help = []string{"⏎ done", "esc clear", "↑↓ move"}
 	}
@@ -499,6 +532,22 @@ func (m model) View() string {
 	return boxSt.Width(inner + 2).Render(b.String())
 }
 
+// paneGone reports a parked session with no pane to return to, shown as
+// parked*: its pane was closed, or now runs another agent.
+func paneGone(r sessions.Row) bool { return r.Parked() && !r.Pending && !r.PaneExists }
+
+// closeQuestion is what x asks before acting on r.
+func closeQuestion(r sessions.Row) string {
+	name := sessions.Printable(r.Name)
+	switch {
+	case paneGone(r):
+		return "Remove " + name + " from the list? Its pane is already gone."
+	case r.Parked():
+		return "Close " + name + "'s pane and remove it from the list?"
+	}
+	return fmt.Sprintf("Exit %s (%s), close its pane and remove it from the list?", name, r.Status)
+}
+
 func statusCell(r sessions.Row) string {
 	glyph, label := "○", r.Status
 	switch r.Status {
@@ -510,7 +559,7 @@ func statusCell(r sessions.Row) string {
 		glyph = "⏸"
 		if r.Pending {
 			label = "parking"
-		} else if !r.PaneExists {
+		} else if paneGone(r) {
 			label = "parked*"
 		}
 	case sessions.StatusUnknown:

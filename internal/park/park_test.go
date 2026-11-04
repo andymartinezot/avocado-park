@@ -50,6 +50,11 @@ func (f *fake) ForegroundProcesses(p string) ([]herdr.Process, error) {
 	return []herdr.Process{{PID: 1, Argv0: "-zsh"}}, nil // a shell prompt
 }
 func (f *fake) FocusPane(p string) error { f.calls = append(f.calls, "focus "+p); return nil }
+func (f *fake) ClosePane(p string) error {
+	f.calls = append(f.calls, "close "+p)
+	delete(f.panes, p)
+	return nil
+}
 func (f *fake) RunInPane(p, line string) error {
 	f.calls = append(f.calls, "run "+p+" "+line)
 	return nil
@@ -696,5 +701,130 @@ func TestSafeCwd(t *testing.T) {
 		if got := safeCwd(dir); got != want {
 			t.Errorf("safeCwd(%q) = %v, want %v", dir, got, want)
 		}
+	}
+}
+
+func TestCloseLiveSession(t *testing.T) {
+	f := &fake{panes: map[string]herdr.Pane{"w3:pZ": agentPane()}, alive: map[int]bool{}}
+	p, store := newParker(t, f)
+	if err := p.Close(liveRow()); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"prompt w3:pZ /exit", "close w3:pZ"}
+	if !slices.Equal(f.calls, want) {
+		t.Fatalf("calls %v, want %v", f.calls, want)
+	}
+	if entries, _ := store.Load(); len(entries) != 0 {
+		t.Fatalf("closing must not record a parked session: %v", entries)
+	}
+}
+
+func TestCloseParkedSession(t *testing.T) {
+	shell := herdr.Pane{PaneID: "w3:pZ", WorkspaceID: "w3"}
+	f := &fake{panes: map[string]herdr.Pane{"w3:pZ": shell}}
+	p, store := newParker(t, f)
+	_ = store.Put(parkedEntry())
+	if err := p.Close(parkedRow(true)); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(f.calls, []string{"close w3:pZ"}) {
+		t.Fatalf("calls %v", f.calls)
+	}
+	if entries, _ := store.Load(); len(entries) != 0 {
+		t.Fatalf("entry kept: %v", entries)
+	}
+}
+
+// parked* has no pane to close: x only takes it off the list.
+func TestClosePaneAlreadyGone(t *testing.T) {
+	// The id may even name an unrelated pane by now: it must be left alone.
+	f := &fake{panes: map[string]herdr.Pane{"w3:pZ": {PaneID: "w3:pZ", WorkspaceID: "w9"}}}
+	p, store := newParker(t, f)
+	_ = store.Put(parkedEntry())
+	if err := p.Close(parkedRow(false)); err != nil {
+		t.Fatal(err)
+	}
+	if len(f.calls) != 0 {
+		t.Fatalf("touched herdr: %v", f.calls)
+	}
+	if entries, _ := store.Load(); len(entries) != 0 {
+		t.Fatalf("entry kept: %v", entries)
+	}
+}
+
+func TestCloseRefusals(t *testing.T) {
+	session := func(status string) herdr.Pane {
+		p := agentPane()
+		p.AgentStatus = status
+		return p
+	}
+	row := func(status string) sessions.Row {
+		r := liveRow()
+		r.Status = status
+		return r
+	}
+	shell := herdr.Pane{PaneID: "w3:pZ", WorkspaceID: "w3"}
+	vim := map[string][]herdr.Process{"w3:pZ": {{PID: 5, Argv0: "vim"}}}
+	pending := parkedRow(true)
+	pending.Pending = true
+
+	cases := []struct {
+		name  string
+		row   sessions.Row
+		pane  herdr.Pane
+		procs map[string][]herdr.Process
+		want  string
+	}{
+		{name: "working", row: row("working"), pane: session("working"), want: "is working"},
+		{name: "blocked", row: row("blocked"), pane: session("blocked"), want: "waiting on a question"},
+		{name: "started working since listed", row: row("idle"), pane: session("working"), want: "is working"},
+		{name: "other session in the pane", row: func() sessions.Row { r := row("idle"); r.AgentRef = "other"; return r }(), pane: session("idle"), want: "different session"},
+		{name: "still exiting", row: pending, pane: shell, want: "still exiting"},
+		{name: "parked pane runs vim", row: parkedRow(true), pane: shell, procs: vim, want: "running vim"},
+		{name: "parked pane resumed elsewhere", row: parkedRow(true), pane: session("idle"), want: "now runs claude"},
+		{name: "parked pane in another workspace", row: parkedRow(true), pane: herdr.Pane{PaneID: "w3:pZ", WorkspaceID: "w9"}, want: "another workspace"},
+		{name: "parked pane unreadable", row: parkedRow(true), pane: shell, procs: map[string][]herdr.Process{"w3:pZ": {}}, want: "can't tell"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := &fake{panes: map[string]herdr.Pane{"w3:pZ": c.pane}, procs: c.procs}
+			p, store := newParker(t, f)
+			_ = store.Put(parkedEntry())
+			err := p.Close(c.row)
+			if err == nil || !strings.Contains(err.Error(), c.want) {
+				t.Fatalf("err %v, want %q", err, c.want)
+			}
+			if len(f.calls) != 0 {
+				t.Fatalf("acted on a refused session: %v", f.calls)
+			}
+			if entries, _ := store.Load(); len(entries) != 1 {
+				t.Fatalf("a refused close changed the list: %v", entries)
+			}
+		})
+	}
+}
+
+func TestCloseAgentWontExitKeepsPane(t *testing.T) {
+	f := &fake{panes: map[string]herdr.Pane{"w3:pZ": agentPane()}, stuck: true}
+	p, _ := newParker(t, f)
+	err := p.Close(liveRow())
+	if err == nil || !strings.Contains(err.Error(), "pane stays open") {
+		t.Fatalf("err %v", err)
+	}
+	if slices.Contains(f.calls, "close w3:pZ") {
+		t.Fatal("closed a pane whose agent is still running")
+	}
+}
+
+// The agent exited, but the shell started something else: not ours to close.
+func TestCloseLeavesPaneRunningAnotherProgram(t *testing.T) {
+	f := &fake{panes: map[string]herdr.Pane{"w3:pZ": agentPane()}, alive: map[int]bool{},
+		procs: map[string][]herdr.Process{"w3:pZ": {{PID: 5, Argv0: "vim"}}}}
+	p, _ := newParker(t, f)
+	if err := p.Close(liveRow()); err == nil || !strings.Contains(err.Error(), "running vim") {
+		t.Fatalf("err %v", err)
+	}
+	if slices.Contains(f.calls, "close w3:pZ") {
+		t.Fatal("closed a busy pane")
 	}
 }

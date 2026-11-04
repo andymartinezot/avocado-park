@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -126,6 +127,14 @@ func (f *fakeHerdr) Prompt(pane, text string) error {
 
 func (f *fakeHerdr) RunInPane(string, string) error { return nil }
 func (f *fakeHerdr) FocusPane(string) error         { return nil }
+
+func (f *fakeHerdr) ClosePane(id string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.panes, id)
+	f.order = slices.DeleteFunc(f.order, func(p string) bool { return p == id })
+	return nil
+}
 
 func (f *fakeHerdr) CreateTab(ws, cwd, label string) (string, error) {
 	f.mu.Lock()

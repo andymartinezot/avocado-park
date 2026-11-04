@@ -22,10 +22,11 @@ avocado-park park --idle [--days N]      # every session idle N+ days (default 3
 avocado-park unpark TARGET               # resume one parked session
 avocado-park unpark --tab [TARGET]       # resume a tab's parked sessions
 avocado-park unpark --all                # resume every parked session
+avocado-park close TARGET                # exit the agent, close its pane, forget the session
 ```
 
 `TARGET` is a pane id (`w3:p14`), a session name, or a session id (8+ characters). Add `--dry-run`
-to any `park` or `unpark` command to print what it would do without changing anything.
+to any `park`, `unpark` or `close` command to print what it would do without changing anything.
 
 ## How to work
 
@@ -39,6 +40,8 @@ to any `park` or `unpark` command to print what it would do without changing any
 
 - **Never park your own session.** From inside herdr, `HERDR_PANE_ID` is your pane: leave it out
   of every target. `park --tab` already skips it.
+- **Only close a session the user named.** `close` can't be undone from here: never close sessions
+  in bulk or on your own judgment, and dry-run it first. To free memory, park instead.
 - **Never use `--force`** unless the user explicitly confirms that session can be interrupted. It
   exits a session that may be in the middle of a reply. Codex often shows `unknown` rather than
   idle; ask before forcing it.

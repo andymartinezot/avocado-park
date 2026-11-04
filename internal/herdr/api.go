@@ -118,6 +118,11 @@ func (c *Client) FocusPane(pane string) error {
 	return c.Call("pane.focus", map[string]string{"pane_id": pane}, nil)
 }
 
+// ClosePane closes a pane. Closing a tab's last pane closes the tab too.
+func (c *Client) ClosePane(pane string) error {
+	return c.Call("pane.close", map[string]string{"pane_id": pane}, nil)
+}
+
 // CreateTab opens a new tab and returns its root pane id.
 func (c *Client) CreateTab(workspace, cwd, label string) (string, error) {
 	params := map[string]any{"workspace_id": workspace, "cwd": cwd, "label": label, "focus": false}

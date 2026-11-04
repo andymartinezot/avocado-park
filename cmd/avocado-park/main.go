@@ -31,12 +31,14 @@ Usage:
   avocado-park unpark [TARGET]            resume a parked session in its pane
   avocado-park unpark --tab [TARGET]      resume every parked session of a tab
   avocado-park unpark --all               resume every parked session
+  avocado-park close TARGET               exit the agent, close its pane, forget the session
   avocado-park panel                      interactive list (what the herdr popup runs)
   avocado-park version
 
 TARGET is a pane id (w3:p14), a session name, or a session id (8+ chars).
-Inside herdr it defaults to the focused pane. Add --dry-run to park or unpark
-to print what would happen without changing anything.
+Inside herdr it defaults to the focused pane, except for close, which always
+needs one. Add --dry-run to park, unpark or close to print what would happen
+without changing anything.
 `
 
 func main() {
@@ -177,6 +179,41 @@ func run(args []string) error {
 			report(client, notify, "Resumed "+row.Name, "in "+pane, err)
 		}
 		return err
+
+	case "close":
+		fs := flag.NewFlagSet("close", flag.ContinueOnError)
+		dry := fs.Bool("dry-run", false, "print what would happen and change nothing")
+		pos, err := parseArgs(fs, args)
+		if err != nil {
+			return err
+		}
+		// No default target: closing can't be undone, so it is always named.
+		if len(pos) != 1 {
+			return fmt.Errorf("usage: avocado-park close [--dry-run] TARGET")
+		}
+		rows, err := p.List()
+		if err != nil {
+			return err
+		}
+		row, err := park.Find(rows, pos[0])
+		if err != nil {
+			return err
+		}
+		if row.PaneID == os.Getenv("HERDR_PANE_ID") {
+			return fmt.Errorf("%s runs in this pane; close it from another pane", row.Name)
+		}
+		if err := park.CanClose(row); err != nil {
+			return err
+		}
+		if *dry {
+			fmt.Println("would close", describeClose(row))
+			return nil
+		}
+		if err := p.Close(row); err != nil {
+			return err
+		}
+		fmt.Println("Closed", describeClose(row))
+		return nil
 
 	case "hook":
 		return runHook(cfg, client, p)
@@ -325,6 +362,15 @@ func describe(r sessions.Row, now time.Time) string {
 		idle = ", idle " + sessions.FormatAge(d)
 	}
 	return fmt.Sprintf("%s (%s, %s%s, in %s)", sessions.Printable(r.Name), r.Kind, r.Status, idle, where)
+}
+
+// describeClose is one line about what closing a session touches.
+func describeClose(r sessions.Row) string {
+	name := sessions.Printable(r.Name)
+	if r.Parked() && !r.PaneExists {
+		return name + " (parked, pane already gone)"
+	}
+	return fmt.Sprintf("%s (%s, %s) and pane %s", name, r.Kind, r.Status, r.PaneID)
 }
 
 func report(c *herdr.Client, notify bool, title, body string, err error) {
