@@ -33,7 +33,7 @@ type model struct {
 	cur  int
 	w, h int
 
-	filter    string // case-insensitive match on name and workspace
+	filter    string // case-insensitive match on name, workspace, tab and pane
 	filtering bool   // typing into the filter
 
 	busy    string // non-empty while an action runs
@@ -153,7 +153,9 @@ func (m *model) refilter() {
 	q := strings.ToLower(m.filter)
 	m.rows = m.rows[:0:0]
 	for _, r := range m.all {
-		if q == "" || strings.Contains(strings.ToLower(r.Name), q) || strings.Contains(strings.ToLower(r.Workspace), q) {
+		if q == "" || slices.ContainsFunc([]string{r.Name, r.Workspace, r.Tab, r.PaneLabel}, func(s string) bool {
+			return strings.Contains(strings.ToLower(s), q)
+		}) {
 			m.rows = append(m.rows, r)
 		}
 	}
@@ -379,24 +381,83 @@ const (
 	wStatus = 10
 	wIdle   = 6
 	wRAM    = 6
+	minName = 14
+	maxName = 40
 	minWS   = 10
+	minTab  = 8
+	minPane = 8
+	gap     = 2 // before the tab and pane columns
 )
+
+// widths are the flexible columns. tab and pane are 0 when hidden.
+type widths struct{ name, ws, tab, pane int }
+
+// fitColumns sizes the flexible columns to fill room. Each starts at the
+// width of its content; when that doesn't fit, the widest gives way first.
+// Too narrow for all four, pane and then tab are hidden.
+func fitColumns(rows []sessions.Row, room int) widths {
+	var w widths
+	for _, r := range rows {
+		w.name = max(w.name, lipgloss.Width(sessions.Printable(r.Name)))
+		w.ws = max(w.ws, lipgloss.Width(wsName(r)))
+		w.tab = max(w.tab, lipgloss.Width(sessions.Printable(r.Tab)))
+		w.pane = max(w.pane, lipgloss.Width(sessions.Printable(r.PaneLabel)))
+	}
+	w.name = min(max(w.name, minName), maxName)
+	w.ws, w.tab, w.pane = max(w.ws, minWS), max(w.tab, minTab), max(w.pane, minPane)
+	cols := []struct {
+		w   *int
+		min int
+	}{{&w.name, minName}, {&w.ws, minWS}, {&w.tab, minTab}, {&w.pane, minPane}}
+	switch {
+	case room >= minName+minWS+minTab+minPane+2*gap:
+		room -= 2 * gap
+	case room >= minName+minWS+minTab+gap:
+		w.pane, cols = 0, cols[:3]
+		room -= gap
+	default:
+		w.tab, w.pane, cols = 0, 0, cols[:2]
+	}
+	used := 0
+	for _, c := range cols {
+		used += *c.w
+	}
+	for ; used > room; used-- {
+		widest := -1
+		for i, c := range cols {
+			if *c.w > c.min && (widest < 0 || *c.w > *cols[widest].w) {
+				widest = i
+			}
+		}
+		if widest < 0 {
+			break
+		}
+		*cols[widest].w--
+	}
+	*cols[len(cols)-1].w += max(0, room-used) // the last column takes what's left
+	return w
+}
+
+// wsName is the row's workspace as shown.
+func wsName(r sessions.Row) string { return workspace(sessions.Printable(r.Workspace)) }
+
+// orDash marks a tab or pane without a name.
+func orDash(s string) string {
+	if s = sessions.Printable(s); s != "" {
+		return s
+	}
+	return "-"
+}
 
 func (m model) View() string {
 	if !m.loaded {
 		return "\n  loading sessions…"
 	}
-	// The box fills the window. Row = cursor(2) + name + gaps(5) + fixed
-	// columns + workspace; the box adds 4 (border + padding). The name column
-	// fits the longest name (14..40) and the workspace takes the rest.
+	// The box fills the window. Row = cursor(2) + gaps(5) + fixed columns +
+	// flexible columns; the box adds 4 (border + padding).
 	fixed := 2 + 5 + wStatus + wIdle + wRAM
-	inner := max(fixed+14+minWS, m.w-4)
-	longest := 0
-	for _, r := range m.rows {
-		longest = max(longest, lipgloss.Width(sessions.Printable(r.Name)))
-	}
-	wName := min(max(longest, 14), 40, inner-fixed-minWS)
-	wWS := inner - fixed - wName
+	inner := max(fixed+minName+minWS, m.w-4)
+	w := fitColumns(m.rows, inner-fixed)
 	now := m.p.Now()
 
 	var b strings.Builder
@@ -409,7 +470,8 @@ func (m model) View() string {
 		b.WriteString("   " + keySt.Render("/") + " " + ansi.Truncate(m.filter, max(8, inner-40), "…") + cursor)
 	}
 	b.WriteString("\n\n")
-	b.WriteString(headSt.Render("  " + cols(wName, wWS, "SESSION", "STATUS", "IDLE", "RAM", "WORKSPACE")))
+	b.WriteString(headSt.Render("  " + pad("SESSION", w.name) + " " + pad("STATUS", wStatus) + " " + padLeft("IDLE", wIdle) + " " +
+		padLeft("RAM", wRAM) + "  " + w.places("WORKSPACE", "TAB", "PANE")))
 	b.WriteString("\n")
 
 	// Keep the cursor visible when there are more rows than lines. Besides
@@ -454,12 +516,12 @@ func (m model) View() string {
 		if r.Parked() && r.FreedBytes > 0 {
 			ramCell = dimSt.Render(padLeft("("+sessions.FormatBytes(r.FreedBytes)+")", wRAM)) // memory freed
 		}
-		nameCell := pad(name, wName)
+		nameCell := pad(name, w.name)
 		idleCell := padLeft(idle, wIdle)
 		if !r.Parked() && r.Ready() && r.IdleFor(now) >= time.Duration(m.opt.IdleDays)*24*time.Hour {
 			idleCell = staleSt.Render(idleCell) // what P would park
 		}
-		rest := idleCell + " " + ramCell + "  " + pad(workspace(sessions.Printable(r.Workspace)), wWS)
+		rest := idleCell + " " + ramCell + "  " + w.places(wsName(r), orDash(r.Tab), orDash(r.PaneLabel))
 		cursor := "  "
 		if r.PaneID == m.opt.Self && !r.Parked() {
 			cursor = dimSt.Render("• ") // the pane the panel was opened from
@@ -572,9 +634,16 @@ func statusCell(r sessions.Row) string {
 	return dimSt.Render(cell)
 }
 
-func cols(wName, wWS int, name, status, idle, ram, ws string) string {
-	return pad(name, wName) + " " + pad(status, wStatus) + " " + padLeft(idle, wIdle) + " " +
-		padLeft(ram, wRAM) + "  " + pad(ws, wWS)
+// places renders the columns that say where a session is.
+func (w widths) places(ws, tab, pane string) string {
+	s := pad(ws, w.ws)
+	if w.tab > 0 {
+		s += strings.Repeat(" ", gap) + pad(tab, w.tab)
+	}
+	if w.pane > 0 {
+		s += strings.Repeat(" ", gap) + pad(pane, w.pane)
+	}
+	return s
 }
 
 func pad(s string, w int) string {

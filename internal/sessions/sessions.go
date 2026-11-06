@@ -53,6 +53,8 @@ type Row struct {
 	TabID       string    `json:"tab_id"`
 	WorkspaceID string    `json:"workspace_id"`
 	Workspace   string    `json:"workspace"`
+	Tab         string    `json:"tab,omitempty"`        // the tab's label
+	PaneLabel   string    `json:"pane_label,omitempty"` // the name given to the pane, if any
 	Cwd         string    `json:"cwd"`
 	PID         int       `json:"pid,omitempty"`
 	RSSBytes    int64     `json:"rss_bytes,omitempty"`
@@ -94,6 +96,7 @@ type Herdr interface {
 	Agents() ([]herdr.Pane, error)
 	Panes() ([]herdr.Pane, error)
 	Workspaces() ([]herdr.Workspace, error)
+	Tabs() ([]herdr.Tab, error)
 	ForegroundProcesses(pane string) ([]herdr.Process, error)
 }
 
@@ -135,6 +138,11 @@ func Build(h Herdr, in Inputs) (Result, error) {
 			wsByLabel[w.Label] = w.WorkspaceID
 		}
 	}
+	tabs, _ := h.Tabs()
+	tabLabel := map[string]string{}
+	for _, t := range tabs {
+		tabLabel[t.TabID] = t.Label
+	}
 	paneByID := map[string]herdr.Pane{}
 	for _, p := range panes {
 		paneByID[p.PaneID] = p
@@ -157,6 +165,8 @@ func Build(h Herdr, in Inputs) (Result, error) {
 			TabID:       a.TabID,
 			WorkspaceID: a.WorkspaceID,
 			Workspace:   wsLabel[a.WorkspaceID],
+			Tab:         tabLabel[a.TabID],
+			PaneLabel:   paneByID[a.PaneID].Label,
 			Cwd:         cmp.Or(a.ForegroundCwd, a.Cwd),
 			Focused:     a.Focused,
 			PaneExists:  true,
@@ -211,6 +221,12 @@ func Build(h Herdr, in Inputs) (Result, error) {
 		}
 		// Once the agent is gone, a pending park is complete.
 		pending := e.Pending && exists && p.Agent != ""
+		// A pane that is still the session's shows its current names; for
+		// anything else, the names saved when it was parked.
+		tab, paneLabel := e.Tab, e.PaneLabel
+		if exists && p.Agent == "" {
+			tab, paneLabel = cmp.Or(tabLabel[p.TabID], tab), p.Label
+		}
 		res.Rows = append(res.Rows, Row{
 			Name:        e.Name,
 			Kind:        cmp.Or(e.Kind, AgentKind),
@@ -220,6 +236,8 @@ func Build(h Herdr, in Inputs) (Result, error) {
 			TabID:       e.TabID,
 			WorkspaceID: wsID,
 			Workspace:   cmp.Or(e.Workspace, wsLabel[wsID]),
+			Tab:         tab,
+			PaneLabel:   paneLabel,
 			Cwd:         e.Cwd,
 			LastActive:  e.LastActive,
 			ParkedAt:    e.ParkedAt,

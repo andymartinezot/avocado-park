@@ -1,0 +1,24 @@
+[
+  {
+    "session_id": "3a5f0000-0000-4000-8000-000000000001",
+    "name": "eks-cluster",
+    "kind": "claude",
+    "pane_id": "w3:p7",
+    "tab_id": "w3:t7",
+    "workspace_id": "w3",
+    "cwd": "/src/eks",
+    "parked_at": "2026-10-20T09:15:00Z",
+    "last_active": "2026-10-14T18:02:11Z",
+    "workspace": "infra",
+    "freed_bytes": 319815680
+  },
+  {
+    "session_id": "3a5f0000-0000-4000-8000-000000000002",
+    "name": "no-kind",
+    "pane_id": "w4:p8",
+    "tab_id": "w4:t8",
+    "workspace_id": "w4",
+    "cwd": "/src/slack",
+    "parked_at": "2026-10-01T09:15:00Z"
+  }
+]

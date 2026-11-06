@@ -70,3 +70,34 @@ func TestMigrateOldStateDir(t *testing.T) {
 		t.Errorf("second migrate touched the old dir: %v", err)
 	}
 }
+
+// Upgrading must keep what was parked: a file from an older release, including
+// its fields nothing writes any more, still loads and survives an update.
+func TestOldFileSurvivesUpgrade(t *testing.T) {
+	b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "parked-v0.1.0.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := Store{Path: filepath.Join(t.TempDir(), "parked.json")}
+	if err := os.WriteFile(s.Path, b, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Put(Entry{SessionID: "new", Name: "new", Tab: "t", PaneLabel: "p"}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("entries %+v", got)
+	}
+	e := got[0]
+	if e.SessionID != "3a5f0000-0000-4000-8000-000000000001" || e.Name != "eks-cluster" || e.PaneID != "w3:p7" ||
+		e.Cwd != "/src/eks" || e.Workspace != "infra" || e.FreedBytes != 319815680 || e.ParkedAt.IsZero() {
+		t.Fatalf("first entry changed: %+v", e)
+	}
+	if got[1].Kind != "" || got[1].Name != "no-kind" {
+		t.Fatalf("second entry changed: %+v", got[1])
+	}
+}

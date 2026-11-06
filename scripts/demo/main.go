@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,26 +22,29 @@ import (
 )
 
 type session struct {
-	name, kind, status, ws, tab, cwd string
-	idle                             time.Duration // 0: no activity time (Codex, OpenCode)
-	mb                               int64
-	parked                           bool
+	name, kind, status, ws, tab, label, cwd string
+	idle                                    time.Duration // 0: no activity time (Codex, OpenCode)
+	mb                                      int64
+	parked                                  bool
 }
 
 var demo = []session{
-	{name: "api-refactor", kind: "claude", status: "working", ws: "backend", tab: "t1", cwd: "/src/api", idle: time.Minute, mb: 460},
-	{name: "codex-migration", kind: "codex", status: "unknown", ws: "backend", tab: "t1", cwd: "/src/api", mb: 142},
-	{name: "release-notes", kind: "claude", status: "idle", ws: "docs", tab: "t2", cwd: "/src/docs", idle: 48 * time.Minute, mb: 267},
+	{name: "api-refactor", kind: "claude", status: "working", ws: "backend", tab: "t1", label: "api", cwd: "/src/api", idle: time.Minute, mb: 460},
+	{name: "codex-migration", kind: "codex", status: "unknown", ws: "backend", tab: "t1", label: "migrations", cwd: "/src/api", mb: 142},
+	{name: "release-notes", kind: "claude", status: "idle", ws: "docs", tab: "t2", label: "notes", cwd: "/src/docs", idle: 48 * time.Minute, mb: 267},
 	{name: "changelog-bot", kind: "claude", status: "idle", ws: "docs", tab: "t2", cwd: "/src/docs", idle: 2 * time.Hour, mb: 231},
-	{name: "docs-site", kind: "opencode", status: "idle", ws: "docs", tab: "t3", cwd: "/src/site", mb: 118},
-	{name: "cert-renewal", kind: "claude", status: "idle", ws: "infra", tab: "t4", cwd: "/src/infra", idle: 43 * time.Hour, mb: 207},
+	{name: "docs-site", kind: "opencode", status: "idle", ws: "docs", tab: "t3", label: "site", cwd: "/src/site", mb: 118},
+	{name: "cert-renewal", kind: "claude", status: "idle", ws: "infra", tab: "t4", label: "certs", cwd: "/src/infra", idle: 43 * time.Hour, mb: 207},
 	{name: "weekly-report", kind: "claude", status: "idle", ws: "home", tab: "t5", cwd: "/src/tickets", idle: 5 * 24 * time.Hour, mb: 185},
-	{name: "helm-charts", kind: "claude", status: "idle", ws: "infra", tab: "t6", cwd: "/src/helm", idle: 9 * 24 * time.Hour, mb: 195},
-	{name: "eks-cluster", kind: "claude", status: "idle", ws: "infra", tab: "t7", cwd: "/src/eks", idle: 12 * 24 * time.Hour, mb: 305, parked: true},
+	{name: "helm-charts", kind: "claude", status: "idle", ws: "infra", tab: "t6", label: "charts", cwd: "/src/helm", idle: 9 * 24 * time.Hour, mb: 195},
+	{name: "eks-cluster", kind: "claude", status: "idle", ws: "infra", tab: "t7", label: "cluster", cwd: "/src/eks", idle: 12 * 24 * time.Hour, mb: 305, parked: true},
 	{name: "chat-digest", kind: "claude", status: "idle", ws: "home", tab: "t8", cwd: "/src/slack", idle: 22 * 24 * time.Hour, mb: 207, parked: true},
 }
 
 var workspaces = map[string]string{"backend": "w1", "docs": "w2", "infra": "w3", "home": "w4"}
+
+var tabs = map[string]string{"t1": "API", "t2": "Writing", "t3": "Website", "t4": "TLS", "t5": "Reports",
+	"t6": "Helm", "t7": "Clusters", "t8": "Slack"}
 
 // fakeHerdr is just enough of herdr for the panel: panes with or without an
 // agent, an agent that exits shortly after /exit, and resume.
@@ -94,6 +98,18 @@ func (f *fakeHerdr) Workspaces() ([]herdr.Workspace, error) {
 	var out []herdr.Workspace
 	for label, id := range workspaces {
 		out = append(out, herdr.Workspace{WorkspaceID: id, Label: label})
+	}
+	return out, nil
+}
+
+func (f *fakeHerdr) Tabs() ([]herdr.Tab, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	var out []herdr.Tab
+	for _, id := range f.order {
+		p := f.panes[id]
+		_, tab, _ := strings.Cut(p.TabID, ":")
+		out = append(out, herdr.Tab{TabID: p.TabID, Label: tabs[tab]})
 	}
 	return out, nil
 }
@@ -198,12 +214,12 @@ func main() {
 		pane := fmt.Sprintf("%s:p%d", ws, i+1)
 		sid := fmt.Sprintf("%08x-demo-%04d", 0x3a5f0000+i*7919, i)
 		p := &herdr.Pane{PaneID: pane, TabID: ws + ":" + s.tab, WorkspaceID: ws, Cwd: s.cwd, ForegroundCwd: s.cwd,
-			TerminalTitleStripped: s.name}
+			Label: s.label, TerminalTitleStripped: s.name}
 		f.panes[pane] = p
 		f.order = append(f.order, pane)
 		if s.parked {
 			_ = store.Put(state.Entry{SessionID: sid, Name: s.name, Kind: s.kind, PaneID: pane, TabID: p.TabID,
-				WorkspaceID: ws, Workspace: s.ws, Cwd: s.cwd, ParkedAt: now.Add(-s.idle / 2),
+				WorkspaceID: ws, Workspace: s.ws, Tab: tabs[s.tab], PaneLabel: s.label, Cwd: s.cwd, ParkedAt: now.Add(-s.idle / 2),
 				LastActive: now.Add(-s.idle), FreedBytes: s.mb << 20})
 			continue
 		}

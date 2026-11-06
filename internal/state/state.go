@@ -27,6 +27,9 @@ type Entry struct {
 	// Workspace is the workspace's label. herdr reassigns ids when it
 	// restarts; the label is how the workspace is found again.
 	Workspace string `json:"workspace,omitempty"`
+	// Tab and PaneLabel are the labels at park time, shown once the pane is gone.
+	Tab       string `json:"tab,omitempty"`
+	PaneLabel string `json:"pane_label,omitempty"`
 	// FreedBytes is the memory the session used when it was parked.
 	FreedBytes int64 `json:"freed_bytes,omitempty"`
 	// Pending means /exit was sent but the agent was not seen exiting.

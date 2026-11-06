@@ -117,20 +117,24 @@ the key. Until you do, the key does nothing.
 ╭───────────────────────────────────────────────────────────────────────────────╮
 │ avocado-park  Claude Code, Codex and OpenCode sessions                        │
 │                                                                               │
-│   SESSION                 STATUS       IDLE    RAM  WORKSPACE                 │
-│ ▸ api-refactor            ● working       -   460M  backend                   │
-│ • release-notes           ○ idle        48m   267M  docs                      │
-│   cert-renewal            ○ idle        43h   207M  infra                     │
-│   weekly-report           ○ idle         5d   185M  home                      │
-│   helm-charts             ○ idle         9d   195M  infra                     │
-│   k8s-cluster             ⏸ parked      12d (305M)  infra                     │
-│   chat-digest             ⏸ parked      22d (207M)  home                      │
+│   SESSION        STATUS       IDLE    RAM  WORKSPACE   TAB       PANE         │
+│ ▸ api-refactor   ● working       -   460M  backend     API       api          │
+│ • release-notes  ○ idle        48m   267M  docs        Writing   notes        │
+│   cert-renewal   ○ idle        43h   207M  infra       TLS       certs        │
+│   weekly-report  ○ idle         5d   185M  home        Reports   -            │
+│   helm-charts    ○ idle         9d   195M  infra       Helm      charts       │
+│   k8s-cluster    ⏸ parked      12d (305M)  infra       Clusters  cluster      │
+│   chat-digest    ⏸ parked      22d (207M)  home        Slack     -            │
 │                                                                               │
 │ 5 live · 1.3G   2 parked · 512M freed                                         │
 │                                                                               │
 │ p park  u unpark  x close  ⏎ go to pane  P park idle ≥3d  T park tab  …       │
 ╰───────────────────────────────────────────────────────────────────────────────╯
 ```
+
+`TAB` and `PANE` show the names you gave them in herdr, with `-` for a pane without a name. A parked
+session keeps showing them after its pane is closed. In a narrow window, `PANE` is dropped first and
+then `TAB`.
 
 | Key | Action |
 |---|---|
@@ -142,7 +146,7 @@ the key. Until you do, the key does nothing.
 | `T` | Park every idle session in the selected session's tab (asks first) |
 | `U` | Resume every parked session (asks first) |
 | `F` | Force-park the selected session even if herdr doesn't report it idle (asks first) |
-| `/` | Filter by session or workspace name |
+| `/` | Filter by session, workspace, tab or pane name |
 | `r` / `q` | Refresh / quit |
 
 - An idle time in **purple** marks a session idle for 3 days or more. Those are the ones `P` parks.
@@ -381,6 +385,8 @@ avocado-park makes no network calls. It only talks to herdr's local socket.
 ## Develop
 
 ```sh
+git config core.hooksPath .githooks      # once per clone: run QA before every push
+scripts/qa.sh                            # run QA by hand
 go test -race ./...
 go build -o bin/avocado-park ./cmd/avocado-park
 herdr plugin link "$PWD"                 # link does not run the build step; run it again after adding event hooks
@@ -388,6 +394,19 @@ bin/avocado-park panel --print --width 84  # render one frame without a popup
 go run ./scripts/demo                    # the panel with made-up sessions, no herdr needed
 vhs scripts/demo/demo.tape               # re-record docs/avocado-park-demo.gif (brew install vhs)
 ```
+
+`scripts/qa.sh` is what must pass before code reaches `main`. The `pre-push` hook runs it on the
+commits being pushed, not on the working folder, and stops the push if anything fails:
+
+| Step | Checks |
+|---|---|
+| Format, `go.mod`, vet | The code is formatted, dependencies are tidy, vet is clean |
+| Unit tests | Everything, with the race detector, including a `parked.json` from an older release |
+| End to end | A real herdr: the plugin loads, then park, resume and close a stand-in agent, using real keys in the panel. Existing config and parked sessions must survive |
+| Real config untouched | Your `config.toml` files and `parked.json` are the same as before QA started |
+
+The end-to-end step needs herdr installed but never uses the herdr you work in: it starts a private
+server with its own home directory and socket.
 
 Releases are cut by pushing a `vX.Y.Z` tag that matches `version` in `herdr-plugin.toml`. GoReleaser
 then publishes the binaries and `SHA256SUMS`.

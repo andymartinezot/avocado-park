@@ -13,6 +13,7 @@ import (
 
 type fakeHerdr struct {
 	agents, panes []herdr.Pane
+	tabs          []herdr.Tab
 	procs         map[string][]herdr.Process
 }
 
@@ -21,6 +22,7 @@ func (f fakeHerdr) Panes() ([]herdr.Pane, error)  { return f.panes, nil }
 func (f fakeHerdr) Workspaces() ([]herdr.Workspace, error) {
 	return []herdr.Workspace{{WorkspaceID: "w3", Label: "🌟 - Platform"}}, nil
 }
+func (f fakeHerdr) Tabs() ([]herdr.Tab, error)                            { return f.tabs, nil }
 func (f fakeHerdr) ForegroundProcesses(p string) ([]herdr.Process, error) { return f.procs[p], nil }
 
 func writeSession(t *testing.T, dir string, body string, pid int) {
@@ -129,6 +131,51 @@ func TestBuildAfterRestart(t *testing.T) {
 	}
 	if r := got["same"]; r.WorkspaceID != "w3" || !r.PaneExists {
 		t.Errorf("same: %+v", r)
+	}
+}
+
+func TestBuildTabAndPaneNames(t *testing.T) {
+	// As in herdr: agent.list carries no label, only pane.list does.
+	agent := herdr.Pane{PaneID: "w3:p1", TabID: "w3:t1", WorkspaceID: "w3", Agent: "claude", AgentStatus: "idle",
+		TerminalTitleStripped: "live", AgentSession: &herdr.AgentSession{Kind: "id", Value: "live-1"}}
+	labelled := agent
+	labelled.Label = "api pane"
+	h := fakeHerdr{
+		agents: []herdr.Pane{agent},
+		panes: []herdr.Pane{labelled,
+			{PaneID: "w3:p2", TabID: "w3:t2", WorkspaceID: "w3", Label: "renamed"},
+			{PaneID: "w3:p3", TabID: "w3:t2", WorkspaceID: "w3"},
+			{PaneID: "w3:p4", TabID: "w3:t2", WorkspaceID: "w3", Label: "other", Agent: "codex"},
+		},
+		tabs: []herdr.Tab{{TabID: "w3:t1", Label: "Backend"}, {TabID: "w3:t2", Label: "Docs now"}},
+	}
+	parked := func(id, pane string) state.Entry {
+		return state.Entry{SessionID: id, Name: id, PaneID: pane, TabID: "w3:t9", WorkspaceID: "w3",
+			Tab: "Docs then", PaneLabel: "saved"}
+	}
+	old := parked("old", "w3:p3") // written before names were saved
+	old.Tab, old.PaneLabel = "", ""
+	res, err := Build(h, Inputs{Now: time.Now(), Parked: []state.Entry{
+		parked("here", "w3:p2"), parked("unnamed", "w3:p3"), parked("gone", "w3:p8"), parked("taken", "w3:p4"), old,
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string][2]string{
+		"live":    {"Backend", "api pane"},
+		"here":    {"Docs now", "renamed"}, // current names win while the pane is the session's
+		"unnamed": {"Docs now", ""},        // the pane's name was removed
+		"gone":    {"Docs then", "saved"},  // pane closed: the saved names
+		"taken":   {"Docs then", "saved"},  // the pane runs another agent now
+		"old":     {"Docs now", ""},
+	}
+	if len(res.Rows) != len(want) {
+		t.Fatalf("rows %+v", res.Rows)
+	}
+	for _, r := range res.Rows {
+		if w := want[r.Name]; r.Tab != w[0] || r.PaneLabel != w[1] {
+			t.Errorf("%s: tab %q pane %q, want %q", r.Name, r.Tab, r.PaneLabel, w)
+		}
 	}
 }
 

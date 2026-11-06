@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/andymartinezot/avocado-park/internal/herdr"
 	"github.com/andymartinezot/avocado-park/internal/park"
@@ -38,6 +39,7 @@ func (f *fakeHerdr) Panes() ([]herdr.Pane, error) {
 	return out, nil
 }
 func (f *fakeHerdr) Workspaces() ([]herdr.Workspace, error) { return nil, nil }
+func (f *fakeHerdr) Tabs() ([]herdr.Tab, error)             { return nil, nil }
 func (f *fakeHerdr) ForegroundProcesses(string) ([]herdr.Process, error) {
 	return []herdr.Process{{PID: 1, Argv0: "-zsh"}}, nil
 }
@@ -206,5 +208,65 @@ func TestCloseRefusesOwnPaneAndBusySessions(t *testing.T) {
 	m, _ = press(t, m, "x")
 	if m.confirm != nil || !strings.Contains(m.msg, "is working") {
 		t.Fatalf("working: confirm %v msg %q", m.confirm, m.msg)
+	}
+}
+
+func placed(name, ws, tab, pane string) sessions.Row {
+	return sessions.Row{Name: name, SessionID: "id-" + name, PaneID: "p-" + name, Status: sessions.StatusIdle,
+		Workspace: ws, Tab: tab, PaneLabel: pane, PaneExists: true}
+}
+
+func TestTabAndPaneColumns(t *testing.T) {
+	m := newModel(t, &fakeHerdr{})
+	m.loaded, m.w, m.h = true, 120, 20
+	m.setRows([]sessions.Row{
+		placed("one", "backend", "Infra tab", "api pane"),
+		placed("two", "docs", "Docs tab", ""),
+	})
+	v := m.View()
+	for _, want := range []string{"WORKSPACE", "TAB", "PANE", "Infra tab", "api pane", "Docs tab"} {
+		if !strings.Contains(v, want) {
+			t.Errorf("no %q in:\n%s", want, v)
+		}
+	}
+	// A pane without a name shows a dash in its column, not a blank.
+	for line := range strings.Lines(v) {
+		if strings.Contains(line, "Docs tab") && !strings.Contains(line, "-") {
+			t.Errorf("no dash in %q", line)
+		}
+	}
+	if m, _ = press(t, m, "/"); len(m.rows) != 2 {
+		t.Fatal("filter dropped rows before typing")
+	}
+	for _, r := range "api" {
+		m, _ = press(t, m, string(r))
+	}
+	if len(m.rows) != 1 || m.rows[0].Name != "one" {
+		t.Fatalf("filter by pane name: %v", m.rows)
+	}
+}
+
+// The frame must never outgrow the window while it has room for the columns
+// it needs, however long the labels are, and it drops pane before tab.
+func TestColumnsFitTheWindow(t *testing.T) {
+	long := strings.Repeat("x", 90)
+	m := newModel(t, &fakeHerdr{})
+	m.loaded, m.h = true, 20
+	m.setRows([]sessions.Row{placed(long, long, long, long), placed("s", "w", "t", "p")})
+	for w := 57; w <= 220; w++ {
+		m.w = w
+		v := m.View()
+		for line := range strings.Lines(v) {
+			if got := lipgloss.Width(strings.TrimRight(line, "\n")); got != w {
+				t.Fatalf("width %d: line is %d wide:\n%s", w, got, v)
+			}
+		}
+		tab, pane := strings.Contains(v, " TAB "), strings.Contains(v, " PANE ")
+		switch {
+		case w >= 77 && !(tab && pane):
+			t.Fatalf("width %d: tab %v pane %v", w, tab, pane)
+		case w < 77 && pane, w < 67 && tab, w >= 67 && !tab:
+			t.Fatalf("width %d: tab %v pane %v", w, tab, pane)
+		}
 	}
 }

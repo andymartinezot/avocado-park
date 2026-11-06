@@ -43,6 +43,7 @@ func (f *fake) Panes() ([]herdr.Pane, error) {
 	return out, nil
 }
 func (f *fake) Workspaces() ([]herdr.Workspace, error) { return nil, nil }
+func (f *fake) Tabs() ([]herdr.Tab, error)             { return nil, nil }
 func (f *fake) ForegroundProcesses(p string) ([]herdr.Process, error) {
 	if procs, ok := f.procs[p]; ok {
 		return procs, nil

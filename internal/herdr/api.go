@@ -9,7 +9,8 @@ type AgentSession struct {
 }
 
 // Pane is the subset of herdr's pane/agent info that avocado-park uses.
-// `agent list` and `pane list` share this shape; Agent is empty for plain shells.
+// `agent list` and `pane list` share this shape, except that Label only comes
+// from `pane list`; Agent is empty for plain shells.
 type Pane struct {
 	PaneID                string        `json:"pane_id"`
 	TabID                 string        `json:"tab_id"`
@@ -44,6 +45,12 @@ type Process struct {
 type Workspace struct {
 	WorkspaceID string `json:"workspace_id"`
 	Label       string `json:"label"`
+}
+
+// Tab is a herdr tab.
+type Tab struct {
+	TabID string `json:"tab_id"`
+	Label string `json:"label"`
 }
 
 // Agents lists every pane where herdr detected an agent.
@@ -86,6 +93,14 @@ func (c *Client) Workspaces() ([]Workspace, error) {
 		Workspaces []Workspace `json:"workspaces"`
 	}
 	return r.Workspaces, c.Call("workspace.list", nil, &r)
+}
+
+// Tabs lists every tab in every workspace.
+func (c *Client) Tabs() ([]Tab, error) {
+	var r struct {
+		Tabs []Tab `json:"tabs"`
+	}
+	return r.Tabs, c.Call("tab.list", map[string]any{}, &r)
 }
 
 // Prompt submits text plus Enter to an agent.

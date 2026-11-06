@@ -421,7 +421,8 @@ func (p *Parker) Park(row sessions.Row, opt ParkOptions) error {
 
 	entry := state.Entry{
 		SessionID: row.SessionID, Name: row.Name, Kind: kind, PaneID: row.PaneID, TabID: row.TabID,
-		WorkspaceID: row.WorkspaceID, Workspace: row.Workspace, Cwd: row.Cwd, ParkedAt: p.Now(),
+		WorkspaceID: row.WorkspaceID, Workspace: row.Workspace, Tab: row.Tab, PaneLabel: row.PaneLabel,
+		Cwd: row.Cwd, ParkedAt: p.Now(),
 		LastActive: row.LastActive, FreedBytes: row.RSSBytes, Pending: true,
 	}
 	return p.exit(row, agent, entry)
