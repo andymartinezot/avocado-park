@@ -36,10 +36,15 @@ func main() {
 	}
 	defer os.Remove(file)
 
-	report := exec.Command("herdr", "pane", "report-agent", "--source", "e2e", "--agent", "claude", "--state", "idle",
-		"--agent-session-id", id, os.Getenv("HERDR_PANE_ID"))
+	// Like herdr's Claude integration (a SessionStart hook), report only the
+	// session id. herdr finds the agent and its state from the process, so
+	// the pane goes back to a plain shell as soon as this exits. Reporting
+	// state with report-agent instead takes over the lifecycle, and herdr can
+	// keep showing the agent after it has gone.
+	report := exec.Command("herdr", "pane", "report-agent-session", os.Getenv("HERDR_PANE_ID"),
+		"--source", "e2e", "--agent", "claude", "--agent-session-id", id)
 	if out, err := report.CombinedOutput(); err != nil {
-		fmt.Fprintf(logf, "report-agent: %v: %s\n", err, out)
+		fmt.Fprintf(logf, "report-agent-session: %v: %s\n", err, out)
 	}
 
 	fmt.Println("e2e agent ready")
