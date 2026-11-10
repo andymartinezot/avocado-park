@@ -1,6 +1,6 @@
 id = "andymartinezot.avocado-park"
 name = "avocado-park"
-version = "0.1.0"
+version = "0.1.1"
 min_herdr_version = "0.9.3"
 description = "Park idle Claude Code, Codex and OpenCode sessions to free memory without closing their panes, then resume them in place."
 platforms = ["macos", "linux"]
