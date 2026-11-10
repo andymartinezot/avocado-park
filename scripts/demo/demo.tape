@@ -21,11 +21,21 @@ Show
 # The list: memory per session, purple idle times past 3 days, parked rows.
 Sleep 3s
 
-# Filter by workspace.
+# One workspace at a time, then back to all.
+Type "w"
+Sleep 1.3s
+Type "w"
+Sleep 1.3s
+Type "w"
+Sleep 1.3s
+Escape
+Sleep 800ms
+
+# Filter by any name.
 Type "/"
 Sleep 400ms
-Type "infra"
-Sleep 1.8s
+Type "helm"
+Sleep 1.5s
 Escape
 Sleep 1s
 

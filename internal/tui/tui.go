@@ -35,6 +35,7 @@ type model struct {
 
 	filter    string // case-insensitive match on name, workspace, tab and pane
 	filtering bool   // typing into the filter
+	ws        string // the only workspace shown (its label); empty shows all
 
 	busy    string // non-empty while an action runs
 	msg     string
@@ -153,6 +154,9 @@ func (m *model) refilter() {
 	q := strings.ToLower(m.filter)
 	m.rows = m.rows[:0:0]
 	for _, r := range m.all {
+		if m.ws != "" && r.Workspace != m.ws {
+			continue
+		}
 		if q == "" || slices.ContainsFunc([]string{r.Name, r.Workspace, r.Tab, r.PaneLabel}, func(s string) bool {
 			return strings.Contains(strings.ToLower(s), q)
 		}) {
@@ -166,6 +170,24 @@ func (m *model) refilter() {
 			break
 		}
 	}
+}
+
+// nextWorkspace moves the workspace filter by step through all, then each
+// workspace with sessions in name order, wrapping around.
+func (m *model) nextWorkspace(step int) {
+	choices := []string{""}
+	for _, r := range m.all {
+		if r.Workspace != "" && !slices.Contains(choices, r.Workspace) {
+			choices = append(choices, r.Workspace)
+		}
+	}
+	slices.SortFunc(choices[1:], func(a, b string) int {
+		return strings.Compare(strings.ToLower(workspace(a)), strings.ToLower(workspace(b)))
+	})
+	// A workspace that has no sessions any more counts as all.
+	i := max(0, slices.Index(choices, m.ws))
+	m.ws = choices[(i+step+len(choices))%len(choices)]
+	m.refilter()
 }
 
 // Actions that ask y/n first.
@@ -235,13 +257,23 @@ func (m model) key(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "/":
 		m.filtering = true
 		return m, nil
+	case "w":
+		m.nextWorkspace(1)
+		return m, nil
+	case "W":
+		m.nextWorkspace(-1)
+		return m, nil
 	case "esc":
-		if m.filter != "" {
+		switch {
+		case m.filter != "":
 			m.filter = ""
-			m.refilter()
-			return m, nil
+		case m.ws != "":
+			m.ws = ""
+		default:
+			return m, tea.Quit
 		}
-		return m, tea.Quit
+		m.refilter()
+		return m, nil
 	case "q", "ctrl+c":
 		return m, tea.Quit
 	case "up", "k":
@@ -462,6 +494,9 @@ func (m model) View() string {
 
 	var b strings.Builder
 	b.WriteString(titleSt.Render("avocado-park") + dimSt.Render("  Claude Code, Codex and OpenCode sessions"))
+	if m.ws != "" {
+		b.WriteString("   " + keySt.Render("w") + " " + ansi.Truncate(workspace(sessions.Printable(m.ws)), max(8, inner-60), "…"))
+	}
 	if m.filtering || m.filter != "" {
 		cursor := ""
 		if m.filtering {
@@ -494,8 +529,11 @@ func (m model) View() string {
 	}
 	if len(m.rows) == 0 {
 		empty := "  no Claude Code, Codex or OpenCode sessions in herdr"
-		if m.filter != "" {
+		switch {
+		case m.filter != "":
 			empty = "  no sessions match " + strconv.Quote(m.filter)
+		case m.ws != "":
+			empty = "  no sessions in " + workspace(sessions.Printable(m.ws))
 		}
 		b.WriteString(dimSt.Render(empty) + "\n")
 	}
@@ -580,7 +618,7 @@ func (m model) View() string {
 	default:
 		b.WriteString("\n")
 	}
-	help := []string{"p park", "u unpark", "x close", "⏎ go to pane", fmt.Sprintf("P park idle ≥%dd", m.opt.IdleDays), "T park tab", "U unpark all", "/ filter", "r refresh", "q quit"}
+	help := []string{"p park", "u unpark", "x close", "⏎ go to pane", fmt.Sprintf("P park idle ≥%dd", m.opt.IdleDays), "T park tab", "U unpark all", "w workspace", "/ filter", "r refresh", "q quit"}
 	if m.filtering {
 		help = []string{"⏎ done", "esc clear", "↑↓ move"}
 	}

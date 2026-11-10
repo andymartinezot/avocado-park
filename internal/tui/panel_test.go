@@ -149,6 +149,11 @@ func press(t *testing.T, m model, key string) (model, tea.Cmd) {
 	return mm.(model), cmd
 }
 
+func pressKey(m model, k tea.KeyType) (model, tea.Cmd) {
+	mm, cmd := m.key(tea.KeyMsg{Type: k})
+	return mm.(model), cmd
+}
+
 func TestCloseAsksFirst(t *testing.T) {
 	f := &fakeHerdr{panes: map[string]herdr.Pane{"p1": agentPane("p1", "one")}}
 	m := newModel(t, f)
@@ -268,5 +273,70 @@ func TestColumnsFitTheWindow(t *testing.T) {
 		case w < 77 && pane, w < 67 && tab, w >= 67 && !tab:
 			t.Fatalf("width %d: tab %v pane %v", w, tab, pane)
 		}
+	}
+}
+
+func TestWorkspaceFilter(t *testing.T) {
+	m := newModel(t, &fakeHerdr{})
+	m.loaded, m.w, m.h = true, 120, 20
+	all := []sessions.Row{
+		placed("api", "🌟 - Backend", "t", "p"),
+		placed("notes", "docs", "t", "p"),
+		placed("site", "docs", "t", "p"),
+	}
+	m.setRows(all)
+	shown := func() (names []string) {
+		for _, r := range m.rows {
+			names = append(names, r.Name)
+		}
+		return names
+	}
+
+	// w goes through the workspaces by name, ignoring the emoji, then back to all.
+	for _, want := range []string{"api", "notes site", "api notes site", "api"} {
+		m, _ = press(t, m, "w")
+		if got := strings.Join(shown(), " "); got != want {
+			t.Fatalf("after w: %q, want %q", got, want)
+		}
+	}
+	if v := m.View(); !strings.Contains(v, "w Backend") {
+		t.Errorf("workspace not in the title:\n%s", v)
+	}
+	m, _ = press(t, m, "W")
+	if m.ws != "" {
+		t.Fatalf("W from the first workspace: %q, want all", m.ws)
+	}
+	m, _ = press(t, m, "W")
+	if m.ws != "docs" {
+		t.Fatalf("W from all: %q, want the last workspace", m.ws)
+	}
+
+	// With /, both apply; esc clears the text first, then the workspace.
+	m, _ = press(t, m, "/")
+	m, _ = press(t, m, "s")
+	m, _ = press(t, m, "i")
+	m, _ = pressKey(m, tea.KeyEnter)
+	if got := strings.Join(shown(), " "); got != "site" {
+		t.Fatalf("workspace and text: %q", got)
+	}
+	m, cmd := pressKey(m, tea.KeyEsc)
+	if cmd != nil || m.filter != "" || m.ws != "docs" {
+		t.Fatalf("first esc: filter %q ws %q", m.filter, m.ws)
+	}
+	m, cmd = pressKey(m, tea.KeyEsc)
+	if cmd != nil || m.ws != "" || len(m.rows) != 3 {
+		t.Fatalf("second esc: ws %q rows %d", m.ws, len(m.rows))
+	}
+
+	// P acts on what is shown, so only on the chosen workspace.
+	old := m.p.Now().Add(-10 * 24 * time.Hour)
+	for i := range all {
+		all[i].LastActive = old
+	}
+	m.setRows(all)
+	m, _ = press(t, m, "w") // Backend
+	m, _ = press(t, m, "P")
+	if len(m.confirm) != 1 || m.confirm[0].Name != "api" {
+		t.Fatalf("P in one workspace would park %v", m.confirm)
 	}
 }

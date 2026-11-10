@@ -61,11 +61,11 @@ unpark = resume that session in the same pane
 
 ## Demo
 
-![The avocado-park panel: filtering, parking idle sessions and a tab, then resuming one](docs/avocado-park-demo.gif)
+![The avocado-park panel: showing one workspace, filtering, parking idle sessions and a tab, then resuming one](docs/avocado-park-demo.gif)
 
 In the recording:
 
-1. `/` filters the list by workspace.
+1. `w` shows one workspace at a time, and `/` filters by session, workspace, tab or pane name.
 2. `P` parks every session idle for 3 days or more. Each one's RAM cell shows the memory it freed,
    in brackets, and the footer adds up the total.
 3. `T` parks every idle session in the selected session's tab.
@@ -146,6 +146,7 @@ then `TAB`.
 | `T` | Park every idle session in the selected session's tab (asks first) |
 | `U` | Resume every parked session (asks first) |
 | `F` | Force-park the selected session even if herdr doesn't report it idle (asks first) |
+| `w` / `W` | Show one workspace at a time: the next or previous one, then all again. `P` and `U` only act on what's shown |
 | `/` | Filter by session, workspace, tab or pane name |
 | `r` / `q` | Refresh / quit |
 
