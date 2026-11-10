@@ -11,6 +11,7 @@ CLAUDE.local.md
 AGENTS.md
 GEMINI.md
 .codex/
+.gemini/
 .cursor/
 .cursorrules
 .windsurf/

@@ -1,10 +1,12 @@
 #!/bin/sh
 # Runs QA on exactly what is being pushed, not on the working folder, so
-# uncommitted files can't make a broken commit pass.
+# uncommitted files can't make a broken commit pass. Also stops assistant
+# config and notes from being published.
 # Enable once per clone: git config core.hooksPath .githooks
 set -u
 
 zero=0000000000000000000000000000000000000000
+private_files='(^|/)(\.claude|\.codex|\.gemini|\.cursor|\.windsurf|\.aider[^/]*)(/|$)|(^|/)(CLAUDE|CLAUDE\.local|AGENTS|GEMINI)\.md$|(^|/)\.cursorrules$|(^|/)copilot-instructions\.md$'
 checked=" "
 while read -r _ sha _ _; do
   case "$sha$checked" in
@@ -12,6 +14,13 @@ while read -r _ sha _ _; do
     *" $sha "*) continue ;; # already checked
   esac
   checked="$checked$sha "
+
+  # .gitignore doesn't stop `git add -f`, so check what the commits add.
+  private=$(git log --name-only --diff-filter=d --format= "$sha" --not --remotes | sort -u | grep -E "$private_files")
+  if [ -n "$private" ]; then
+    printf 'qa: push stopped; these must stay out of the repo:\n%s\n' "$private" >&2
+    exit 1
+  fi
 
   dir=$(mktemp -d) || exit 1
   trap 'rm -rf "$dir"' EXIT
