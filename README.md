@@ -34,6 +34,7 @@ guessing which pane held which work.
 - [Codex and OpenCode](#codex-and-opencode)
 - [Agent skill](#agent-skill)
 - [Configure](#configure)
+- [Themes](#themes)
 - [Safety](#safety)
 - [State and privacy](#state-and-privacy)
 - [Troubleshooting](#troubleshooting)
@@ -336,6 +337,25 @@ what was parked.
 
 ---
 
+## Themes
+
+The panel uses the avocado palette shared with
+[avocado-trope](https://github.com/andymartinezot/avocado-trope) and
+[avocado-keep-awake](https://github.com/andymartinezot/avocado-keep-awake): `dracula` (default),
+`catppuccin`, `tokyo-night`, `gruvbox`, `nord`, `classic` and `terminal`. Each color has the same
+job in every avocado plugin: the accent marks the title and keys, green marks a working agent, yellow
+one that's blocked, blue a parked one, and the muted color marks the selected row.
+
+It picks the first of:
+
+1. `$AVOCADO_PARK_THEME`, or `$AVOCADO_THEME` to set every avocado plugin at once
+2. The theme you last switched to in avocado-trope (`t`), so they always match
+3. herdr's own `[theme] name`. Names like `tokyo-night-storm` or `catppuccin-mocha` map to the
+   matching theme, and light variants use `terminal`, which follows your terminal's colors
+4. `dracula`
+
+---
+
 ## Safety
 
 Parking stops a process, so avocado-park is careful about what it parks and where it types.
@@ -365,7 +385,8 @@ Parked sessions live in `~/.local/state/avocado-park/parked.json` (or `$XDG_STAT
 created readable only by you (`0600` file, `0700` folder). It holds session names, folders, pane ids
 and session ids. Don't commit or share it.
 
-avocado-park makes no network calls. It only talks to herdr's local socket.
+avocado-park makes no network calls. It only talks to herdr's local socket. To pick a theme it
+reads, never writes, `~/.config/avocado-trope/theme` and herdr's `config.toml`.
 
 ---
 

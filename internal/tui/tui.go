@@ -23,6 +23,8 @@ type Options struct {
 	Self     string
 	IdleDays int
 	Refresh  time.Duration
+	// Theme is an avocado theme id (see ThemeNames); empty picks one with PickTheme.
+	Theme string
 }
 
 type model struct {
@@ -58,6 +60,7 @@ type tickMsg struct{}
 
 // Run shows the panel until the user quits.
 func Run(p *park.Parker, opt Options) error {
+	applyTheme(opt.Theme)
 	_, err := tea.NewProgram(model{p: p, opt: opt}, tea.WithAltScreen()).Run()
 	return err
 }
@@ -69,6 +72,7 @@ func Render(p *park.Parker, opt Options, width, height int) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	applyTheme(opt.Theme)
 	m := model{p: p, opt: opt, w: width, h: height, loaded: true}
 	m.setRows(rows)
 	return m.View(), nil
@@ -385,30 +389,6 @@ func (m model) unparkAll(batch []sessions.Row) tea.Cmd {
 
 // ---- view ----
 
-var (
-	accent    = lipgloss.AdaptiveColor{Light: "#5B4FC4", Dark: "#A99BFF"}
-	dim       = lipgloss.AdaptiveColor{Light: "#8A8A8A", Dark: "#6E6E6E"}
-	green     = lipgloss.AdaptiveColor{Light: "#1E8A4C", Dark: "#5FD787"}
-	yellow    = lipgloss.AdaptiveColor{Light: "#A86A00", Dark: "#F2C14E"}
-	blue      = lipgloss.AdaptiveColor{Light: "#2F6FB3", Dark: "#7AB8F5"}
-	red       = lipgloss.AdaptiveColor{Light: "#B3261E", Dark: "#FF8A80"}
-	purple    = lipgloss.AdaptiveColor{Light: "#9C3FC9", Dark: "#D08CFF"}
-	titleSt   = lipgloss.NewStyle().Bold(true).Foreground(accent)
-	headSt    = lipgloss.NewStyle().Foreground(dim).Bold(true)
-	dimSt     = lipgloss.NewStyle().Foreground(dim)
-	selSt     = lipgloss.NewStyle().Bold(true)
-	keySt     = lipgloss.NewStyle().Foreground(accent).Bold(true)
-	errSt     = lipgloss.NewStyle().Foreground(red)
-	okSt      = lipgloss.NewStyle().Foreground(green)
-	staleSt   = lipgloss.NewStyle().Foreground(purple)
-	boxSt     = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(0, 1)
-	statusSty = map[string]lipgloss.Style{
-		sessions.StatusWorking: lipgloss.NewStyle().Foreground(green),
-		sessions.StatusBlocked: lipgloss.NewStyle().Foreground(yellow),
-		sessions.StatusParked:  lipgloss.NewStyle().Foreground(blue),
-	}
-)
-
 const (
 	wStatus = 10
 	wIdle   = 6
@@ -568,7 +548,11 @@ func (m model) View() string {
 			cursor = keySt.Render("▸ ")
 			nameCell = selSt.Render(nameCell)
 		}
-		b.WriteString(cursor + nameCell + " " + statusCell(r) + rest + "\n")
+		line := cursor + nameCell + " " + statusCell(r) + rest
+		if i == m.cur {
+			line = paintSeq(line, selectSeq(), inner)
+		}
+		b.WriteString(line + "\n")
 	}
 	// Pad short lists so the footer sits at the bottom of the box.
 	shown := min(len(m.rows)-start, avail)
@@ -629,7 +613,7 @@ func (m model) View() string {
 	// Truncated rather than wrapped, so the frame never grows past the window.
 	b.WriteString(ansi.Truncate(strings.Join(help, "  "), inner, "…"))
 
-	return boxSt.Width(inner + 2).Render(b.String())
+	return paint(boxSt.Width(inner+2).Render(b.String()), cur.surface, m.w)
 }
 
 // paneGone reports a parked session with no pane to return to, shown as
